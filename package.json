@@ -16,7 +16,10 @@
     "build": "pnpm -r --if-present build",
     "verify": "pnpm lint && pnpm typecheck && pnpm test:unit && pnpm test:integration && pnpm build",
     "db:reset": "pnpm --filter @ql/api db:reset",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "demo": "pnpm --filter @ql/web dev:demo",
+    "demo:build": "pnpm --filter @ql/web build:demo",
+    "test:e2e:demo": "pnpm --filter @ql/web test:e2e:demo"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

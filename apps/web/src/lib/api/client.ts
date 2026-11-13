@@ -14,6 +14,10 @@ export class ApiError extends Error {
 }
 
 const BASE = '/api/v1';
+
+// Demo build only: answer from the in-browser sample-data handler instead of the network. Vite replaces
+// the literal at build time, so in any other build this branch and the whole demo module are dropped.
+const demoModule = import.meta.env.VITE_DEMO === 'true' ? () => import('../../demo/handler') : null;
 const TIMEOUT_MS = 15_000;
 
 export interface FetchOptions<T> {
@@ -36,16 +40,18 @@ export async function apiFetch<T = unknown>(path: string, opts: FetchOptions<T> 
 
   let res: Response;
   try {
-    res = await fetch(`${BASE}${path}`, {
-      method,
-      headers,
-      credentials: 'same-origin',
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-      // A hung request must not leave a screen loading forever: give up after 15 seconds.
-      signal: signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(TIMEOUT_MS)])
-        : AbortSignal.timeout(TIMEOUT_MS),
-    });
+    res = demoModule
+      ? await (await demoModule()).demoRequest(method, path, body)
+      : await fetch(`${BASE}${path}`, {
+          method,
+          headers,
+          credentials: 'same-origin',
+          ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+          // A hung request must not leave a screen loading forever: give up after 15 seconds.
+          signal: signal
+            ? AbortSignal.any([signal, AbortSignal.timeout(TIMEOUT_MS)])
+            : AbortSignal.timeout(TIMEOUT_MS),
+        });
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') throw err;
     throw new ApiError(0, 'network', 'Could not reach the server');

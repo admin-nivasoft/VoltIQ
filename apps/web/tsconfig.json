@@ -5,5 +5,13 @@
     "jsx": "react-jsx",
     "types": ["vite/client", "node"]
   },
-  "include": ["src", "e2e", "vite.config.ts", "tailwind.config.ts", "playwright.config.ts"]
+  "include": [
+    "e2e",
+    "e2e-demo",
+    "playwright.config.ts",
+    "playwright.demo.config.ts",
+    "src",
+    "tailwind.config.ts",
+    "vite.config.ts"
+  ]
 }

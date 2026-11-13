@@ -11,12 +11,14 @@ const out: string[] = [];
 const scratch = join(root, 'node_modules', '.cache', 'bundle-test');
 mkdirSync(scratch, { recursive: true });
 
-async function bundle(mockAuth: string | undefined): Promise<string> {
+async function bundle(mockAuth: string | undefined, demo?: string): Promise<string> {
   const outDir = mkdtempSync(join(scratch, 'build-'));
   out.push(outDir);
-  const previous = process.env.VITE_MOCK_AUTH;
-  if (mockAuth === undefined) delete process.env.VITE_MOCK_AUTH;
-  else process.env.VITE_MOCK_AUTH = mockAuth;
+  const saved = { mock: process.env.VITE_MOCK_AUTH, demo: process.env.VITE_DEMO };
+  const set = (k: string, v: string | undefined) =>
+    v === undefined ? delete process.env[k] : (process.env[k] = v);
+  set('VITE_MOCK_AUTH', mockAuth);
+  set('VITE_DEMO', demo);
   try {
     await build({
       root,
@@ -26,8 +28,8 @@ async function bundle(mockAuth: string | undefined): Promise<string> {
       build: { outDir, emptyOutDir: true, write: true },
     });
   } finally {
-    if (previous === undefined) delete process.env.VITE_MOCK_AUTH;
-    else process.env.VITE_MOCK_AUTH = previous;
+    set('VITE_MOCK_AUTH', saved.mock);
+    set('VITE_DEMO', saved.demo);
   }
   const files = readdirSync(join(outDir, 'assets')).filter((f) => f.endsWith('.js'));
   expect(files.length).toBeGreaterThan(0);
@@ -66,5 +68,43 @@ describe('production bundle', () => {
     const js = await bundle('true');
     for (const m of MARKERS) expect(js, m).toContain(m);
     expect(js).toContain('mock-login');
+  }, 180_000);
+});
+
+// The stakeholder demo (VITE_DEMO=true) carries made-up fleet data and a fake API. None of it may
+// ever be in a normal build, or a real deployment could show invented numbers.
+const DEMO_MARKERS = [
+  'Sample data only',
+  'Choose a demo user',
+  'Aurora Motors',
+  'Meridian Storage Systems',
+  'Northgate Logistics',
+  'ql-demo-user',
+  'Priya Nair',
+];
+
+describe('demo bundle', () => {
+  it.each<[string, string | undefined]>([
+    ['unset', undefined],
+    ['false', 'false'],
+    ['TRUE', 'TRUE'],
+  ])(
+    'VITE_DEMO %s: no sample data, no fake API, no banner',
+    async (_label, value) => {
+      const js = await bundle(undefined, value);
+      for (const m of DEMO_MARKERS) expect(js, m).not.toContain(m);
+    },
+    180_000,
+  );
+
+  it('VITE_MOCK_AUTH alone does not pull the demo in either (the picker is shared, so only its wording may appear)', async () => {
+    const js = await bundle('true', undefined);
+    for (const m of DEMO_MARKERS.filter((x) => x !== 'Choose a demo user'))
+      expect(js, m).not.toContain(m);
+  }, 180_000);
+
+  it('VITE_DEMO true: the banner, the sample data and the in-browser API are all there', async () => {
+    const js = await bundle(undefined, 'true');
+    for (const m of DEMO_MARKERS) expect(js, m).toContain(m);
   }, 180_000);
 });

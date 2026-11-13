@@ -227,5 +227,7 @@ _Claude appends one line per decision: date, step, decision, reason._
 - 2026-11-13 · step 8 · ESLint allows `tabIndex` on `role="region"` for the scrollable pack table (a scrollable region must be keyboard-focusable). Inline eslint-disable comments stay banned.
 - 2026-11-13 · step 8 · Disk space: the system volume reached 100% during this step and blocked command output; two regenerable updater caches were deleted with the user's permission. Keep an eye on `/`.
 
+- 2026-11-13 · extra (stakeholder demo) · A browser-only demo build, `VITE_DEMO=true` (`pnpm demo`, `pnpm demo:build`): the API client answers from `src/demo/handler.ts` (made-up fleets for three fictional companies, the real permission policy, in-memory changes, 120 ms artificial delay) instead of the network, every page shows a DEMO banner with a Reset button, and the sign-in picker is shown with friendly wording. It is an explicit build flag, never an automatic fallback, so a real deployment cannot show invented numbers. A bundle test builds with the flag unset, `false` and `TRUE` and searches for the demo data, banner text, company names and storage key; none may appear. `pnpm test:e2e:demo` runs 13 Chrome checks with no API or database and fails if the page calls `/api`. Hosting notes (Vercel) are in `docs/DEMO.md`; the Vercel config was written to Vercel's documented behaviour but not run against a Vercel account.
+
 ## Blockers
 _Claude records anything that stopped a step, and what is needed to unblock it._

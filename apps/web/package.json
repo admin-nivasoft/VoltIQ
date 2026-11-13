@@ -9,7 +9,11 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test:unit": "vitest run --reporter=dot",
-    "test:e2e": "mkdir -p ../../.tmp && TMPDIR=\"$(cd ../../.tmp && pwd)\" playwright test"
+    "test:e2e": "mkdir -p ../../.tmp && TMPDIR=\"$(cd ../../.tmp && pwd)\" playwright test",
+    "dev:demo": "VITE_DEMO=true vite",
+    "build:demo": "VITE_DEMO=true vite build",
+    "preview:demo": "vite preview --host 127.0.0.1 --port 4173",
+    "test:e2e:demo": "mkdir -p ../../.tmp && TMPDIR=\"$(cd ../../.tmp && pwd)\" playwright test -c playwright.demo.config.ts"
   },
   "dependencies": {
     "@ql/contracts": "workspace:*",

@@ -1,6 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { BrowserRouter, Link, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { DemoBanner } from '../components/DemoBanner';
 import { PageHeading } from '../components/ui/PageHeading';
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/states';
 import { FleetPage } from '../features/fleet/FleetPage';
@@ -90,10 +91,17 @@ export function AppRoutes() {
   );
 }
 
+/** Forgets the demo user and every change, then reloads from the sample data. Demo builds only. */
+async function resetAndReload() {
+  if (import.meta.env.VITE_DEMO === 'true') (await import('../demo/handler')).resetDemo();
+  window.location.assign('/');
+}
+
 export default function App() {
   const [client] = useState(createQueryClient);
   return (
     <QueryClientProvider client={client}>
+      {import.meta.env.VITE_DEMO === 'true' ? <DemoBanner onReset={resetAndReload} /> : null}
       <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>
