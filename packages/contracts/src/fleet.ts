@@ -39,7 +39,7 @@ export const PackSummarySchema = z
       .object({
         monthsLow: z.number().min(0),
         monthsHigh: z.number().min(0),
-        confidence: Confidence,
+        confidence: Confidence.nullable(),
       })
       .nullable(),
     modelVersion: z.string().nullable(),

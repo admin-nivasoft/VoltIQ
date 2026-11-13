@@ -5,7 +5,7 @@ export const DEFAULT_PAGE_SIZE = 25;
 
 /** Query params shared by every list endpoint. `sort` is checked per endpoint against an allow-list. */
 export const PageQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
   pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
   sort: z.string().max(64).optional(),
 });

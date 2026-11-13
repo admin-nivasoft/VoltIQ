@@ -1,5 +1,6 @@
 import type { FastifyError, FastifyInstance } from 'fastify';
 import type { ZodError } from 'zod';
+import { QueryError } from './data/query.ts';
 import { ErrorSchema, type ApiError } from '@ql/contracts';
 
 type Code = ApiError['error']['code'];
@@ -54,6 +55,9 @@ export function registerErrorHandling(app: FastifyInstance): void {
     let out;
     if (err instanceof HttpError) {
       out = envelope(err.status, err.code, err.message, err.details);
+    } else if (err instanceof QueryError) {
+      // A bad sort key or page from the client: generic message, never the internals.
+      out = envelope(400, 'validation_failed', 'The request is invalid');
     } else if ('statusCode' in err && err.statusCode === 429) {
       out = envelope(429, 'rate_limited', 'Too many requests');
     } else if ('statusCode' in err && err.statusCode === 404) {

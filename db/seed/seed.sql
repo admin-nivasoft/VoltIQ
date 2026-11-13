@@ -38,7 +38,7 @@ BEGIN
     SELECT md5('pack-' || cons.code || '-' || n)::uuid,
            cons.id,
            'QL-' || cons.code || '-' || lpad(n::text, 4, '0'),
-           (ARRAY['LFP-48V-100Ah', 'NMC-72V-60Ah', 'LFP-400V-250kWh'])[1 + n % 3],
+           CASE WHEN cons.code <> 'A' AND n = 1 THEN 'CANARY-CONSUMER-' || cons.code || ' spec' ELSE (ARRAY['LFP-48V-100Ah', 'NMC-72V-60Ah', 'LFP-400V-250kWh'])[1 + n % 3] END,
            CASE WHEN n <= 36 THEN 'ASSET-' || cons.code || '-' || lpad(n::text, 3, '0') END,
            CASE WHEN n IN (38, 39) THEN 'out_of_service' WHEN n = 40 THEN 'retired' ELSE 'in_service' END,
            current_date + ((n * 37) % 760 - 200)
@@ -72,7 +72,7 @@ BEGIN
            cons.id,
            md5('pack-' || cons.code || '-' || (1 + (i * 7) % 40))::uuid,
            sev,
-           (CASE sev WHEN 'high' THEN 'Battery health is dropping faster than expected'
+           (CASE WHEN cons.code <> 'A' AND i = 2 THEN 'CANARY-CONSUMER-' || cons.code || ' alert: ' ELSE '' END) || (CASE sev WHEN 'high' THEN 'Battery health is dropping faster than expected'
                      WHEN 'medium' THEN 'Battery is ageing faster than similar packs'
                      ELSE 'Small change in battery behaviour' END),
            (CASE sev WHEN 'high' THEN 'This pack has lost capacity quickly over the last few weeks and may not last its planned service life.'

@@ -63,7 +63,7 @@ Acceptance:
 - [x] Without the dev env flags, `/auth/mock-login` returns 404
 
 ## Step 4 · Data layer and adapter contract tests
-Status: todo
+Status: done
 Run with: model=sonnet effort=high
 
 Build:
@@ -72,8 +72,8 @@ Build:
 - A shared contract test suite that any adapter can run.
 
 Acceptance:
-- [ ] The contract suite passes for `postgres-mock`, including cross-tenant cases
-- [ ] Unit tests cover the trend edge cases: under 3 readings, flat, declining, improving
+- [x] The contract suite passes for `postgres-mock`, including cross-tenant cases
+- [x] Unit tests cover the trend edge cases: under 3 readings, flat, declining, improving
 
 ## Step 5 · Fleet, packs and alerts endpoints
 Status: todo
@@ -186,6 +186,16 @@ _Claude appends one line per decision: date, step, decision, reason._
 - 2026-11-13 · step 3 · `/healthz` and `/readyz` are exempt from rate limiting.
 - 2026-11-13 · step 3 · Not built (outside the step): `PUT /admin/permissions` (use `role_policy_publish()` and `audit_platform_event()`), logout audit and server-side session revocation (add a `jti` denylist before Entra), real Entra settings validation, a user list for the step 7 dev switcher (hard-code the seeded ids or add a mock-only endpoint then).
 - 2026-11-13 · step 3 · Nginx (step 10) must set `proxy_set_header X-Forwarded-For $remote_addr` and `Host $host`, and the API must be started with `TRUST_PROXY` set to the Nginx address.
+
+- 2026-11-13 · step 4 · Repository methods that act for a user take one `Principal { consumerId, userId }` built only from the token (`acknowledgeAlert`, `listChannels`, `saveChannels`) · a user id from a path or body can never be passed by accident. Step 5 routes must build it from `req.auth` and add a route test that a technician sending another user's id changes only their own channels.
+- 2026-11-13 · step 4 · The contract suite runs twice: normally, and on a superuser connection where RLS filters nothing, so the adapter's own `consumer_id` predicates are tested. Any vendor adapter has no RLS behind it and must pass the same way.
+- 2026-11-13 · step 4 · `remainingLife.confidence` is nullable in the contract; near-EOL and the range are computed from `rul_months_low/high` alone, so a missing confidence cannot hide a near-end-of-life pack (D-10, D-09).
+- 2026-11-13 · step 4 · Near-EOL, average SoH and packs-in-service count only `in_service` packs. The business day for warranty status is the UTC calendar day; a malformed date throws instead of reading as active.
+- 2026-11-13 · step 4 · Pack search and sort run in memory over the consumer's packs (trend needs the history window). Fine for the mock scale; a vendor or large-fleet adapter should push this into its source.
+- 2026-11-13 · step 4 · New migration adds CHECKs to `notification_log` (alert kind needs an alert id, attempt >= 1). Step 6's worker must write only short fixed error codes to `notification_log.error`, never provider internals or webhook URLs.
+- 2026-11-13 · step 4 · Seed now puts CANARY strings in B and C pack specs and alert titles, so the canary leak check can actually find something.
+- 2026-11-13 · step 4 · `page` is capped at 100000 in the contract; `GET /notification-log` accepts only the default sort.
+- 2026-11-13 · step 4 · The `test-engineer` agent was not run separately; the security review's test findings were applied instead.
 
 ## Blockers
 _Claude records anything that stopped a step, and what is needed to unblock it._
