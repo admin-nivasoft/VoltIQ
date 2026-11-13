@@ -1,0 +1,11 @@
+.DS_Store
+node_modules/
+dist/
+.env
+.env.local
+.env.production
+.claude/logs/
+.claude/settings.local.json
+coverage/
+playwright-report/
+test-results/

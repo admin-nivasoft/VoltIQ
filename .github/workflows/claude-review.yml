@@ -1,0 +1,31 @@
+name: Claude review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Review pull request #${{ github.event.pull_request.number }} in ${{ github.repository }}.
+            Read CLAUDE.md and docs/plan-amendments.md first. Apply the checklists in
+            .claude/agents/tenant-security-reviewer.md and, for apps/web changes,
+            .claude/agents/frontend-a11y-reviewer.md.
+            Post one PR comment: a findings table (Severity, file:line, problem, fix) and the line
+            "Tenant isolation verdict: PASS/FAIL". Only report real problems. Don't change code.
+          claude_args: |
+            --allowedTools "Read,Grep,Glob,Bash(git diff:*),Bash(git log:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
