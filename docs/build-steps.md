@@ -48,7 +48,7 @@ Acceptance:
 - [x] Inserting a health row whose consumer doesn't match its pack fails
 
 ## Step 3 · API core: config, mock auth, policy, /me
-Status: todo
+Status: done
 Run with: model=opus effort=high
 
 Build:
@@ -58,9 +58,9 @@ Build:
 - The error envelope, rate limiting, security headers, `/healthz` and `/readyz`.
 
 Acceptance:
-- [ ] Unit tests: policy checks, and startup refuses the unsafe config combinations
-- [ ] Integration test: logging in as each seeded role returns the right permissions from `/me`
-- [ ] Without the dev env flags, `/auth/mock-login` returns 404
+- [x] Unit tests: policy checks, and startup refuses the unsafe config combinations
+- [x] Integration test: logging in as each seeded role returns the right permissions from `/me`
+- [x] Without the dev env flags, `/auth/mock-login` returns 404
 
 ## Step 4 · Data layer and adapter contract tests
 Status: todo
@@ -178,6 +178,14 @@ _Claude appends one line per decision: date, step, decision, reason._
 - 2026-11-13 · step 2 · Pack warranty is stored as `warranty_expires_on` and the Active/Expiring/Expired status is derived at read time from the config threshold (D-10).
 - 2026-11-13 · step 2 · `db:reset` refuses non-local hosts and NODE_ENV=production.
 - 2026-11-13 · step 2 · Rule for later steps: database error `detail` is never returned to clients; 23505/23503 map to a generic 404 or 409. `manufacturers` is readable by every consumer: add RLS before a second manufacturer is seeded (D-06).
+
+- 2026-11-13 · step 3 · Every request re-checks the user (role and consumer) against the database via `auth_find_user`, so a signed token with stale or wrong claims is rejected · limits the 8 h stale-privilege window.
+- 2026-11-13 · step 3 · `NODE_ENV` and `AUTH_PROVIDER` are required (no defaults) and `TRUST_PROXY` must be `false` or a proxy address, never `true` · production checks cannot be skipped by omission; per-IP rate limits stay meaningful behind Nginx.
+- 2026-11-13 · step 3 · Cookie `Secure` is always on in production; elsewhere only localhost may omit it · D-08 without trusting the Host header in production.
+- 2026-11-13 · step 3 · A bare `ZodError` is a 500 (server bug); only `parseInput()` turns request input into a 400 with details · stops DTO or internal field names reaching clients.
+- 2026-11-13 · step 3 · `/healthz` and `/readyz` are exempt from rate limiting.
+- 2026-11-13 · step 3 · Not built (outside the step): `PUT /admin/permissions` (use `role_policy_publish()` and `audit_platform_event()`), logout audit and server-side session revocation (add a `jti` denylist before Entra), real Entra settings validation, a user list for the step 7 dev switcher (hard-code the seeded ids or add a mock-only endpoint then).
+- 2026-11-13 · step 3 · Nginx (step 10) must set `proxy_set_header X-Forwarded-For $remote_addr` and `Host $host`, and the API must be started with `TRUST_PROXY` set to the Nginx address.
 
 ## Blockers
 _Claude records anything that stopped a step, and what is needed to unblock it._

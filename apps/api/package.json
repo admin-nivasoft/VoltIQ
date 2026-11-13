@@ -7,12 +7,20 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test:unit": "vitest run --reporter=dot --passWithNoTests",
     "test:integration": "vitest run -c vitest.integration.config.ts --reporter=dot",
-    "db:reset": "tsx src/data/cli/reset.ts"
+    "db:reset": "tsx src/data/cli/reset.ts",
+    "dev": "tsx watch --env-file=../../.env src/server.ts",
+    "start": "tsx --env-file=../../.env src/server.ts"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.5",
+    "@fastify/helmet": "^13.2.0",
+    "@fastify/rate-limit": "^11.2.2",
     "@ql/contracts": "workspace:*",
+    "fastify": "^5.12.8",
+    "jose": "^6.2.17",
     "node-pg-migrate": "^9.0.0",
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@testcontainers/postgresql": "^12.2.1",
