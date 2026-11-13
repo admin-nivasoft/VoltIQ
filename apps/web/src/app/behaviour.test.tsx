@@ -3,7 +3,17 @@ import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ME_KEY } from '../lib/auth/session';
-import { makeMe, renderWithProviders, stubFetch, testClient } from '../test/utils';
+import {
+  makeAlert,
+  makeMe,
+  makePack,
+  makeSummary,
+  page,
+  renderWithProviders,
+  stubApi,
+  stubFetch,
+  testClient,
+} from '../test/utils';
 import { AppRoutes } from './App';
 import { Layout } from './Layout';
 
@@ -15,11 +25,18 @@ afterEach(() => {
 describe('a failed background refresh does not blank a signed-in screen', () => {
   it('keeps the shell and the page when the next /me poll fails', async () => {
     const client = testClient();
-    stubFetch(() => ({ status: 500, body: { error: { code: 'internal', message: 'x' } } }));
+    // Only /me fails; the fleet screen's own data loads normally.
+    stubApi({
+      'GET /me': { status: 500, body: { error: { code: 'internal', message: 'x' } } },
+      'GET /fleet/summary': { body: makeSummary() },
+      'GET /alerts': { body: page([makeAlert(1)]) },
+      'GET /packs': { body: page([makePack(1)]) },
+    });
     renderWithProviders(<AppRoutes />, { me: makeMe('fleet_manager'), client });
     expect(
       await screen.findByRole('heading', { level: 1, name: /fleet health/i }),
     ).toBeInTheDocument();
+    await screen.findByText('QL-A-0001');
     await client.invalidateQueries({ queryKey: ME_KEY }); // this refetch fails
     await waitFor(() => expect(client.getQueryState(ME_KEY)?.status).toBe('error'));
     expect(screen.getByRole('heading', { level: 1, name: /fleet health/i })).toBeInTheDocument();

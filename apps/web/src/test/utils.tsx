@@ -73,3 +73,85 @@ export function stubFetch(
 /** The calls a stubbed fetch received, as [url, init] with init always defined. */
 export const callsOf = (spy: ReturnType<typeof stubFetch>) =>
   spy.mock.calls.map(([url, init]) => [String(url), (init ?? {}) as RequestInit] as const);
+
+// ---- fixtures and a path-based API stub for the fleet screen ----
+import type { Alert, FleetSummary, PackSummary } from '@ql/contracts';
+
+export const makeSummary = (over: Partial<FleetSummary> = {}): FleetSummary => ({
+  packsInService: 37,
+  averageSohPct: 91.8,
+  activeAlerts: 6,
+  packsNearingEol: 7,
+  asOf: new Date().toISOString(),
+  ...over,
+});
+
+export const makePack = (n: number, over: Partial<PackSummary> = {}): PackSummary => ({
+  id: `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
+  serial: `QL-A-${String(n).padStart(4, '0')}`,
+  spec: 'LFP-48V-100Ah',
+  assetId: `ASSET-A-${String(n).padStart(3, '0')}`,
+  status: 'in_service',
+  warrantyStatus: 'active',
+  sohPct: 90 - n / 10,
+  trend: { direction: 'stable', pointsPer30Days: -0.1 },
+  remainingLife: { monthsLow: 8, monthsHigh: 12, confidence: 0.82 },
+  modelVersion: 'ql-health-1.3.0',
+  recordedAt: new Date().toISOString(),
+  ...over,
+});
+
+export const makeAlert = (n: number, over: Partial<Alert> = {}): Alert => ({
+  id: `11111111-1111-4111-8111-${String(n).padStart(12, '0')}`,
+  packId: `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
+  packSerial: `QL-A-${String(n).padStart(4, '0')}`,
+  severity: 'high',
+  title: `Battery health is dropping faster than expected ${n}`,
+  description: 'This pack has lost capacity quickly over the last few weeks.',
+  recommendedAction: 'Arrange an inspection within 7 days.',
+  status: 'open',
+  createdAt: '2026-11-10T09:30:00.000Z',
+  acknowledgedBy: null,
+  acknowledgedAt: null,
+  modelVersion: 'ql-health-1.3.0',
+  confidence: 0.8,
+  signals: null,
+  ...over,
+});
+
+export const page = <T,>(items: T[], total = items.length, p = 1, pageSize = 25) => ({
+  items,
+  total,
+  page: p,
+  pageSize,
+  asOf: new Date().toISOString(),
+});
+
+type Reply = { status?: number; body?: unknown };
+type Route = Reply | ((url: URL, init: RequestInit) => Reply | Promise<Reply>);
+
+/** Answers by `METHOD /path` (without /api/v1). Unknown routes are a 404 so a test never talks to a real server. */
+export function stubApi(routes: Record<string, Route>) {
+  return stubFetch(async (raw, init) => {
+    const url = new URL(raw, 'http://localhost');
+    const key = `${init.method ?? 'GET'} ${url.pathname.replace(/^\/api\/v1/, '')}`;
+    const route = routes[key];
+    if (!route)
+      return { status: 404, body: { error: { code: 'not_found', message: `no stub for ${key}` } } };
+    return typeof route === 'function' ? route(url, init) : route;
+  });
+}
+
+/** Switches the media query used for the table/cards swap. */
+export function setViewport(kind: 'phone' | 'desktop') {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: kind === 'desktop',
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+    onchange: null,
+  }));
+}

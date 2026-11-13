@@ -115,7 +115,7 @@ Acceptance:
 - [x] A production build with `VITE_MOCK_AUTH=false` contains no switcher code (checked by grepping the bundle)
 
 ## Step 8 · Fleet health screen
-Status: todo
+Status: done
 Run with: model=sonnet effort=medium
 
 Build:
@@ -124,9 +124,9 @@ Build:
 - The "last refreshed" time.
 
 Acceptance:
-- [ ] Component tests for each panel, including empty and error states
-- [ ] Playwright: sign in as fleet manager, acknowledge an alert, and the tile count drops; as technician there is no Acknowledge button
-- [ ] axe reports no serious or critical issues at 390, 768 and 1440 px
+- [x] Component tests for each panel, including empty and error states
+- [x] Playwright: sign in as fleet manager, acknowledge an alert, and the tile count drops; as technician there is no Acknowledge button
+- [x] axe reports no serious or critical issues at 390, 768 and 1440 px
 
 ## Step 9 · Settings
 Status: todo
@@ -217,6 +217,15 @@ _Claude appends one line per decision: date, step, decision, reason._
 - 2026-11-13 · step 7 · Not done yet: the return-to-where-you-were redirect after sign-in (a deep link falls back to the home page); axe checks and real-size checks arrive with the Playwright tests in step 8; the 44 px unit test only checks the class name, so real sizing is verified by hand at 390 px and by Playwright later.
 - 2026-11-13 · step 7 · The web bundle includes `@ql/contracts`, which pulls in `@asteasolutions/zod-to-openapi` through `common.ts`. Acceptable for now (about 84 kB gzipped total); split the OpenAPI extension out of the shared schemas if the bundle size becomes a concern.
 - 2026-11-13 · step 7 · Environment: the system disk `/` was 98% full (about 260 MB free), which made one test run fail with ENOSPC. Test scratch space now lives inside the project (`apps/web/node_modules/.cache`), on the larger volume.
+
+- 2026-11-13 · step 8 · The fleet screen asks only for what the user may see (`fleet.view` for tiles, `alerts.view` for alerts, `packs.view` for packs); a section without its permission is not rendered and makes no request. Acknowledge is wrapped in `<Can permission="alerts.acknowledge">`.
+- 2026-11-13 · step 8 · Packs sort by serial, state of health, remaining life and warranty, on both layouts; trend is shown (words, arrow, slope) but is not a sort option, because the table has no trend header and D-14 requires the same sorts in table and cards. Search and sort are done by the API.
+- 2026-11-13 · step 8 · After a successful acknowledge the list and the Active alerts tile are refetched and focus returns to the Alerts heading; every Acknowledge button is disabled while one is in flight or while old rows show under a new filter. Announcements name the alert and its pack (titles repeat) and clear when the filter or page changes.
+- 2026-11-13 · step 8 · If a list shrinks under you (the last alert on page 2 is acknowledged), the page steps back instead of showing an empty page with no pager. A new search starts at page 1 once the term settles.
+- 2026-11-13 · step 8 · "Last refreshed" shows the oldest successful refresh among the sections on screen; Refresh is disabled and labelled while anything is fetching. A failed refresh keeps the old numbers with a visible "couldn't refresh, showing data from HH:MM:SS" notice.
+- 2026-11-13 · step 8 · Playwright (`pnpm test:e2e`) drives the Chrome already installed (no browser download), against the compose database (reset before every run), the API in mock mode and the Vite dev server. It sets TMPDIR to `.tmp/` in the repo because the system disk can fill up. Step 10 re-points the same specs at the full Compose stack. axe runs at 390, 768 and 1440 px and fails on serious or critical issues; moderate and minor are not yet asserted.
+- 2026-11-13 · step 8 · ESLint allows `tabIndex` on `role="region"` for the scrollable pack table (a scrollable region must be keyboard-focusable). Inline eslint-disable comments stay banned.
+- 2026-11-13 · step 8 · Disk space: the system volume reached 100% during this step and blocked command output; two regenerable updater caches were deleted with the user's permission. Keep an eye on `/`.
 
 ## Blockers
 _Claude records anything that stopped a step, and what is needed to unblock it._

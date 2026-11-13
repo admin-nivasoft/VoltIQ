@@ -75,6 +75,12 @@ export default tseslint.config(
   },
   { ...jsxA11y.flatConfigs.recommended, files: ['apps/web/**/*.{ts,tsx}'] },
   {
+    files: ['apps/web/**/*.{ts,tsx}'],
+    // A scrollable region must be focusable so keyboard users can scroll it (WCAG 2.1.1); a labelled
+    // region with tabIndex=0 is the standard pattern, so it is allowed here.
+    rules: { 'jsx-a11y/no-noninteractive-tabindex': ['error', { roles: ['tabpanel', 'region'] }] },
+  },
+  {
     files: ['apps/api/src/data/**'],
     rules: { 'no-restricted-imports': 'off', 'no-restricted-syntax': 'off' },
   },
