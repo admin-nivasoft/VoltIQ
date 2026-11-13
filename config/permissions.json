@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "roles": {
+    "fleet_manager": [
+      "fleet.view",
+      "alerts.view",
+      "alerts.acknowledge",
+      "packs.view",
+      "channels.manage_own"
+    ],
+    "technician": ["fleet.view", "alerts.view", "packs.view", "channels.manage_own"],
+    "consumer_admin": [
+      "fleet.view",
+      "alerts.view",
+      "alerts.acknowledge",
+      "packs.view",
+      "channels.manage_own",
+      "notifications.view_log"
+    ],
+    "platform_admin": ["permissions.manage"]
+  }
+}

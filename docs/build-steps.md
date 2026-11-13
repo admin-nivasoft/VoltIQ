@@ -11,7 +11,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked`
 ---
 
 ## Step 1 · Monorepo scaffold and contracts
-Status: todo
+Status: done
 Run with: model=sonnet effort=medium
 
 Build:
@@ -23,9 +23,9 @@ Build:
 - `.env.example` with every variable from D-08 and D-10.
 
 Acceptance:
-- [ ] `pnpm install && pnpm lint && pnpm typecheck && pnpm test:unit` passes
-- [ ] A test proves that importing `pg` outside `apps/api/src/data` fails lint
-- [ ] A test proves the contracts contain no `supplier`, `cohort` or `cell_lot` (D-12)
+- [x] `pnpm install && pnpm lint && pnpm typecheck && pnpm test:unit` passes
+- [x] A test proves that importing `pg` outside `apps/api/src/data` fails lint
+- [x] A test proves the contracts contain no `supplier`, `cohort` or `cell_lot` (D-12)
 
 ## Step 2 · Database schema, RLS and seed
 Status: todo
@@ -161,6 +161,13 @@ Acceptance:
 
 ## Decisions taken during the build
 _Claude appends one line per decision: date, step, decision, reason._
+- 2026-11-13 · step 1 · `signals` in the Alert contract is a fixed whitelist (unknown keys stripped), not a free record · jsonb contents could otherwise leak internal quality data.
+- 2026-11-13 · step 1 · RolePolicy schemas reject `permissions.manage` on any role but `platform_admin`, and any other permission on `platform_admin` · enforces D-01 in the contract.
+- 2026-11-13 · step 1 · Channel request body (`NotificationChannelInput`) has no `id`; upsert key is (user from token, type) · stops cross-user overwrite inside a consumer.
+- 2026-11-13 · step 1 · ESLint boundary also bans dynamic `import()`, `createRequire`, more DB/notification SDKs, and sets `noInlineConfig` · closes bypasses found in review.
+- 2026-11-13 · step 1 · `.env.example` leaves `JWT_SECRET` empty and comments out the mock/dev flags · fail closed (D-08). `JWT_TTL_HOURS`, `COOKIE_SECURE` and the owner DB URL in the API env are removed or marked migration-only.
+- 2026-11-13 · step 1 · `pnpm verify` is green while `test:integration` is a placeholder · step 2 must replace it; the placeholder must never survive step 2.
+- 2026-11-13 · step 1 · DB-level tests (D-12) live under `apps/api/src/data/__tests__` so the boundary rule needs no exception for tests.
 
 ## Blockers
 _Claude records anything that stopped a step, and what is needed to unblock it._
