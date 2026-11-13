@@ -28,7 +28,7 @@ Acceptance:
 - [x] A test proves the contracts contain no `supplier`, `cohort` or `cell_lot` (D-12)
 
 ## Step 2 · Database schema, RLS and seed
-Status: todo
+Status: done
 Run with: model=opus effort=high
 
 Build:
@@ -43,9 +43,9 @@ Build:
 - `pnpm db:reset`.
 
 Acceptance:
-- [ ] `docker compose up -d db && pnpm db:reset` works twice in a row
-- [ ] The D-12 database-level RLS tests pass, including the pooled-connection leak test
-- [ ] Inserting a health row whose consumer doesn't match its pack fails
+- [x] `docker compose up -d db && pnpm db:reset` works twice in a row
+- [x] The D-12 database-level RLS tests pass, including the pooled-connection leak test
+- [x] Inserting a health row whose consumer doesn't match its pack fails
 
 ## Step 3 · API core: config, mock auth, policy, /me
 Status: todo
@@ -168,6 +168,16 @@ _Claude appends one line per decision: date, step, decision, reason._
 - 2026-11-13 · step 1 · `.env.example` leaves `JWT_SECRET` empty and comments out the mock/dev flags · fail closed (D-08). `JWT_TTL_HOURS`, `COOKIE_SECURE` and the owner DB URL in the API env are removed or marked migration-only.
 - 2026-11-13 · step 1 · `pnpm verify` is green while `test:integration` is a placeholder · step 2 must replace it; the placeholder must never survive step 2.
 - 2026-11-13 · step 1 · DB-level tests (D-12) live under `apps/api/src/data/__tests__` so the boundary rule needs no exception for tests.
+
+- 2026-11-13 · step 2 · DB container is published on 127.0.0.1:5442 · 5432 and 5433 are used by other local Postgres instances.
+- 2026-11-13 · step 2 · FORCE RLS binds ql_owner too, so SECURITY DEFINER lookups use `TO ql_owner` policies: read-only on users/consumers, INSERT of consumer-less platform_admin, INSERT of consumer-less audit rows, and read/insert on role_policies. None apply to ql_app; a test checks that every policy reaching ql_app or PUBLIC uses `ql_visible`.
+- 2026-11-13 · step 2 · Platform-level writes go through definer functions `audit_platform_event()` and `role_policy_publish()`, which refuse to run inside a tenant context and require a `platform_admin` actor · D-01: stops code running for a consumer from changing the global policy or forging platform audit events. `role_policies` has forced RLS; ql_app can only read it. Step 3's `PUT /admin/permissions` must use these functions.
+- 2026-11-13 · step 2 · `audit_events` has a composite FK (user_id, consumer_id) → users · closes a tenant-column mismatch D-03 did not list.
+- 2026-11-13 · step 2 · UNIQUE keys on notification_channels and notification_jobs lead with consumer_id · equivalent to D-14's UNIQUE (user_id, type), but a cross-tenant insert fails on the FK rather than a duplicate-key error that reveals another tenant's row.
+- 2026-11-13 · step 2 · ql_app has column-level UPDATE only (alerts: status/acknowledged_*; channels: type/target/enabled; jobs: attempts/next_attempt_at/status), no sequence grants.
+- 2026-11-13 · step 2 · Pack warranty is stored as `warranty_expires_on` and the Active/Expiring/Expired status is derived at read time from the config threshold (D-10).
+- 2026-11-13 · step 2 · `db:reset` refuses non-local hosts and NODE_ENV=production.
+- 2026-11-13 · step 2 · Rule for later steps: database error `detail` is never returned to clients; 23505/23503 map to a generic 404 or 409. `manufacturers` is readable by every consumer: add RLS before a second manufacturer is seeded (D-06).
 
 ## Blockers
 _Claude records anything that stopped a step, and what is needed to unblock it._

@@ -11,11 +11,11 @@
     "lint": "eslint . --max-warnings 0",
     "typecheck": "pnpm -r --if-present typecheck",
     "test:unit": "pnpm -r --if-present test:unit",
-    "test:integration": "node scripts/placeholder.mjs test:integration step 2",
-    "test:e2e": "node scripts/placeholder.mjs test:e2e step 8",
+    "test:integration": "pnpm -r --if-present test:integration",
+    "test:e2e": "node -e \"console.log('[test:e2e] not implemented yet (arrives in step 8).')\"",
     "build": "pnpm -r --if-present build",
     "verify": "pnpm lint && pnpm typecheck && pnpm test:unit && pnpm test:integration && pnpm build",
-    "db:reset": "node scripts/placeholder.mjs db:reset step 2",
+    "db:reset": "pnpm --filter @ql/api db:reset",
     "format": "prettier --write ."
   },
   "devDependencies": {

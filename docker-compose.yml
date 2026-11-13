@@ -1,0 +1,19 @@
+# Step 2: database only. Step 10 adds the api and web services.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: qualityloop
+    ports:
+      - '127.0.0.1:5442:5432'
+    volumes:
+      - qldata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d qualityloop']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+volumes:
+  qldata:
