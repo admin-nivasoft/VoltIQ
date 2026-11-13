@@ -3,21 +3,33 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { Config } from './config.ts';
-import type { AppStateRepository } from './data/index.ts';
+import { buildOpenApiDocument } from '@ql/contracts/openapi';
+import type { AppStateRepository, FleetDataSource } from './data/index.ts';
 import { registerErrorHandling } from './errors.ts';
 import { createTokens, registerAuth } from './modules/access/auth.ts';
 import { PolicyService } from './modules/access/policy.ts';
 import { registerAccessRoutes } from './modules/access/routes.ts';
+import { registerAlertRoutes } from './modules/alerts/routes.ts';
+import { registerFleetRoutes } from './modules/fleet/routes.ts';
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    /** Every registered route and whether it has a preHandler guard. Read by tests, never by code paths. */
+    routeInventory: { method: string; url: string; guarded: boolean }[];
+  }
+}
 
 export interface AppDeps {
   config: Config;
   repo: AppStateRepository;
+  fleet: FleetDataSource;
   logger?: boolean;
 }
 
 export async function buildApp({
   config,
   repo,
+  fleet,
   logger = false,
 }: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
@@ -27,6 +39,13 @@ export async function buildApp({
   });
   const tokens = createTokens(config.jwtSecret);
   const policy = new PolicyService(repo);
+
+  const routeInventory: FastifyInstance['routeInventory'] = [];
+  app.decorate('routeInventory', routeInventory);
+  app.addHook('onRoute', (r) => {
+    for (const method of [r.method].flat())
+      routeInventory.push({ method, url: r.url, guarded: Boolean(r.preHandler) });
+  });
 
   registerErrorHandling(app);
   await app.register(helmet);
@@ -54,6 +73,11 @@ export async function buildApp({
   await app.register(
     async (api) => {
       registerAccessRoutes(api, { config, repo, policy, tokens });
+      registerFleetRoutes(api, { fleet, policy });
+      registerAlertRoutes(api, { fleet, repo, policy });
+      // The API description lists no consumer data and no mock endpoints, so it is public.
+      const openapi = buildOpenApiDocument();
+      api.get('/openapi.json', async () => openapi);
     },
     { prefix: '/api/v1' },
   );

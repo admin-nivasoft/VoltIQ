@@ -1,4 +1,5 @@
 import { z, Uuid, IsoTimestamp, Confidence, SeveritySchema } from './common.js';
+import { pageOf } from './page.js';
 
 export const AlertStatuses = ['open', 'acknowledged', 'resolved'] as const;
 export const AlertStatusSchema = z.enum(AlertStatuses);
@@ -34,6 +35,9 @@ export const AlertSchema = z
   })
   .openapi('Alert');
 export type Alert = z.infer<typeof AlertSchema>;
+
+/** Page of alerts, as returned by GET /alerts. */
+export const AlertPageSchema = pageOf(AlertSchema).openapi('AlertPage');
 
 export const AlertSortFields = ['createdAt', 'severity', 'status'] as const;
 export const AlertQuerySchema = z.object({

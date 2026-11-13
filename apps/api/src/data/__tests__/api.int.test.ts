@@ -5,6 +5,7 @@ import { MeSchema, type RolePolicy } from '@ql/contracts';
 import policyFile from '../../../../../config/permissions.json';
 import { buildApp } from '../../app.ts';
 import { loadConfig } from '../../config.ts';
+import { createPostgresMockSource } from '../adapters/postgres-mock.ts';
 import { createAppStateRepository } from '../app-state.ts';
 import { createPool } from '../pool.ts';
 import { withTenant } from '../tenant.ts';
@@ -35,6 +36,7 @@ const app = async (o: Record<string, string> = {}): Promise<FastifyInstance> =>
   buildApp({
     config: loadConfig(env(o) as NodeJS.ProcessEnv),
     repo: createAppStateRepository(pool),
+    fleet: createPostgresMockSource(pool, loadConfig(env() as NodeJS.ProcessEnv)),
   });
 
 const login = async (a: FastifyInstance, userId: string) => {
@@ -151,6 +153,7 @@ describe('mock features fail closed (D-08)', () => {
     const a = await buildApp({
       config: loadConfig(e as NodeJS.ProcessEnv),
       repo: createAppStateRepository(pool),
+      fleet: createPostgresMockSource(pool, loadConfig(env() as NodeJS.ProcessEnv)),
     });
     const r = await a.inject({
       method: 'POST',
@@ -303,6 +306,7 @@ describe('request hardening', () => {
     await a.close();
     const broken = await buildApp({
       config: loadConfig(env() as NodeJS.ProcessEnv),
+      fleet: createPostgresMockSource(pool, loadConfig(env() as NodeJS.ProcessEnv)),
       repo: {
         ...createAppStateRepository(pool),
         ping: async () => {

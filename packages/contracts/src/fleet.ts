@@ -6,6 +6,7 @@ import {
   PackStatusSchema,
   WarrantyStatusSchema,
 } from './common.js';
+import { pageOf } from './page.js';
 
 export const FleetSummarySchema = z
   .object({
@@ -55,6 +56,9 @@ export const PackSortFields = [
   'remainingLife',
   'warrantyStatus',
 ] as const;
+/** Page of packs, as returned by GET /packs. */
+export const PackPageSchema = pageOf(PackSummarySchema).openapi('PackPage');
+
 export const PackQuerySchema = z.object({
   q: z.string().max(100).optional(),
 });

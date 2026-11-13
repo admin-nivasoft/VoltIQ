@@ -4,8 +4,8 @@ import { createDataLayer, createPool } from './data/index.ts';
 
 const config = loadConfig(process.env);
 const pool = createPool(config.databaseUrl);
-const { state } = createDataLayer(config, pool); // `fleet` is wired into routes in step 5.
-const app = await buildApp({ config, repo: state, logger: true });
+const { fleet, state } = createDataLayer(config, pool);
+const app = await buildApp({ config, repo: state, fleet, logger: true });
 
 for (const sig of ['SIGINT', 'SIGTERM'] as const) {
   process.on(sig, () => {

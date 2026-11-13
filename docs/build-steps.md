@@ -76,7 +76,7 @@ Acceptance:
 - [x] Unit tests cover the trend edge cases: under 3 readings, flat, declining, improving
 
 ## Step 5 · Fleet, packs and alerts endpoints
-Status: todo
+Status: done
 Run with: model=sonnet effort=medium
 
 Build:
@@ -84,9 +84,9 @@ Build:
 - OpenAPI served at `/api/v1/openapi.json`.
 
 Acceptance:
-- [ ] Integration tests cover every endpoint for each role: 403 for a missing permission, 404 for another consumer's alert
-- [ ] Acknowledging lowers the active alert count; a second acknowledgement is idempotent; acknowledging a resolved alert returns 409
-- [ ] The D-12 canary crawl passes
+- [x] Integration tests cover every endpoint for each role: 403 for a missing permission, 404 for another consumer's alert
+- [x] Acknowledging lowers the active alert count; a second acknowledgement is idempotent; acknowledging a resolved alert returns 409
+- [x] The D-12 canary crawl passes
 
 ## Step 6 · Notifications
 Status: todo
@@ -196,6 +196,12 @@ _Claude appends one line per decision: date, step, decision, reason._
 - 2026-11-13 · step 4 · Seed now puts CANARY strings in B and C pack specs and alert titles, so the canary leak check can actually find something.
 - 2026-11-13 · step 4 · `page` is capped at 100000 in the contract; `GET /notification-log` accepts only the default sort.
 - 2026-11-13 · step 4 · The `test-engineer` agent was not run separately; the security review's test findings were applied instead.
+
+- 2026-11-13 · step 5 · Permission checks run in `preHandler`, before the id is parsed or looked up, so a technician gets 403 for any alert id and existence never leaks. A malformed id is a 400 (syntax only); a valid id that is missing or another consumer's is a 404.
+- 2026-11-13 · step 5 · `/api/v1/openapi.json` is public and lists only implemented endpoints (mock login and `/dev` are never documented). It does name the role `platform_admin` and permission `permissions.manage` via the shared enums; accepted, since it is not tenant data. Steps 6 and 9 add their endpoints to the document.
+- 2026-11-13 · step 5 · `buildApp` records a `routeInventory`; a test fails if any `/api/v1` route (other than sign-in, sign-out, `/me` and the spec) is undocumented or has no permission guard. Later steps get this check for free.
+- 2026-11-13 · step 5 · The mock adapter refuses a consumer with more than 2000 packs (it sorts and pages in memory). A real adapter, or a larger demo, must push sorting and paging into its source or cache the computed list.
+- 2026-11-13 · step 5 · Carried to step 6: a route-level test that a technician sending another user's id in `PUT /notification-channels` changes only their own channels (build the Principal from `req.auth`).
 
 ## Blockers
 _Claude records anything that stopped a step, and what is needed to unblock it._

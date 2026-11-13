@@ -45,6 +45,9 @@ interface PackRow extends Record<string, unknown> {
   readings: [number, number][];
 }
 
+/** Upper bound on packs the in-memory mock adapter will hold for one consumer. */
+const MAX_PACKS_IN_MEMORY = 2000;
+
 const WARRANTY_RANK = { expired: 0, expiring: 1, active: 2 } as const;
 
 const PACK_SORT_KEYS: Record<
@@ -95,11 +98,17 @@ export function createPostgresMockSource(
                SELECT json_agg(json_build_array(extract(epoch FROM recorded_at), soh_pct) ORDER BY recorded_at) AS readings
                  FROM pack_health WHERE pack_id = p.id AND consumer_id = p.consumer_id AND recorded_at >= $2) r ON true
             WHERE p.consumer_id = $1
-              AND ($3::text IS NULL OR p.serial ILIKE $3 ESCAPE '\\' OR p.asset_id ILIKE $3 ESCAPE '\\' OR p.spec ILIKE $3 ESCAPE '\\')`,
-            [consumerId, windowStart.toISOString(), pattern],
+              AND ($3::text IS NULL OR p.serial ILIKE $3 ESCAPE '\\' OR p.asset_id ILIKE $3 ESCAPE '\\' OR p.spec ILIKE $3 ESCAPE '\\')
+            LIMIT $4`,
+            [consumerId, windowStart.toISOString(), pattern, MAX_PACKS_IN_MEMORY + 1],
           )
         ).rows,
     );
+    // The mock adapter sorts and pages in memory. Fail loudly rather than let one large fleet
+    // tie up the shared pool: a real adapter must page in its source.
+    if (rows.length > MAX_PACKS_IN_MEMORY) {
+      throw new Error(`postgres-mock: more than ${MAX_PACKS_IN_MEMORY} packs for one consumer`);
+    }
     return rows.map((r) => {
       const readings: Reading[] = r.readings.map(([sec, soh]) => ({ at: sec * 1000, sohPct: soh }));
       const trend = computeTrend(readings, now.getTime(), thresholds);
