@@ -103,7 +103,7 @@ Acceptance:
 - [x] Integration test: jobs survive an API restart (stop the worker, start it again, and the jobs complete)
 
 ## Step 7 · Frontend shell
-Status: todo
+Status: done
 Run with: model=sonnet effort=medium
 
 Build:
@@ -111,8 +111,8 @@ Build:
 - The dev login switcher behind `VITE_MOCK_AUTH`, the layout with the branded top bar, the `<Can>` component, and shared loading, empty and error components.
 
 Acceptance:
-- [ ] Component tests: `<Can>` hides controls; the error and empty states render
-- [ ] A production build with `VITE_MOCK_AUTH=false` contains no switcher code (checked by grepping the bundle)
+- [x] Component tests: `<Can>` hides controls; the error and empty states render
+- [x] A production build with `VITE_MOCK_AUTH=false` contains no switcher code (checked by grepping the bundle)
 
 ## Step 8 · Fleet health screen
 Status: todo
@@ -210,6 +210,13 @@ _Claude appends one line per decision: date, step, decision, reason._
 - 2026-11-13 · step 6 · Config: `NOTIFY_*=mock` is refused when `NODE_ENV=production`, and only `mock` exists, so a production start is impossible until a real provider is added; that is the intended fail-closed behaviour. `POST /notification-channels/test` is limited to 5 a minute per user. Still to add with a real SMS provider: a daily per-user cap and target verification before a channel is enabled. Webhook SSRF protection at connect time (resolve DNS, block private ranges, no redirects) is still deferred (D-07).
 - 2026-11-13 · step 6 · `POST /dev/simulate-alert` is guarded by a preHandler (platform_admin only), audits before it acts, and is deliberately absent from OpenAPI. The route inventory test requires every `/api/v1/dev/*` route to be guarded.
 - 2026-11-13 · step 6 · Nginx (step 10) and the Compose API service must run exactly one API replica or several: both are safe (SKIP LOCKED plus leases), but set `TRUST_PROXY` as noted in step 3.
+
+- 2026-11-13 · step 7 · The dev login switcher hard-codes the seeded user ids (`features/dev/mockUsers.ts`) instead of the API listing users; it and `mockLogin` exist only behind `VITE_MOCK_AUTH === 'true'`. A test builds the app with the variable unset, `false`, `TRUE` and `true` and greps the bundle for the switcher text, the seeded ids, `AUTH_PROVIDER`, `ENABLE_DEV_ENDPOINTS` and `mock-login`. The shared `api` object deliberately has no mock method.
+- 2026-11-13 · step 7 · `useSession` reads cached data before the error flag, so one failed background poll never blanks a signed-in screen; only a real 401 signs the user out. Sign-out clears the session only when the server confirms it.
+- 2026-11-13 · step 7 · Accessibility fixes from review: white focus ring inside the dark header (blue-700 was 2.7:1 there), a document title and a focused h1 for every page, a main landmark on loading and error screens, a persistent polite live region for loading text, `aria-disabled` instead of `disabled` on busy buttons, only a same-origin path is accepted as the logo, and requests time out after 15 s. Contrast of every colour pair in use was computed by the reviewer and passes AA (the only failure was the focus ring, now fixed).
+- 2026-11-13 · step 7 · Not done yet: the return-to-where-you-were redirect after sign-in (a deep link falls back to the home page); axe checks and real-size checks arrive with the Playwright tests in step 8; the 44 px unit test only checks the class name, so real sizing is verified by hand at 390 px and by Playwright later.
+- 2026-11-13 · step 7 · The web bundle includes `@ql/contracts`, which pulls in `@asteasolutions/zod-to-openapi` through `common.ts`. Acceptable for now (about 84 kB gzipped total); split the OpenAPI extension out of the shared schemas if the bundle size becomes a concern.
+- 2026-11-13 · step 7 · Environment: the system disk `/` was 98% full (about 260 MB free), which made one test run fail with ENOSPC. Test scratch space now lives inside the project (`apps/web/node_modules/.cache`), on the larger volume.
 
 ## Blockers
 _Claude records anything that stopped a step, and what is needed to unblock it._

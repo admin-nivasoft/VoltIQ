@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+  /* One visible focus style for every interactive element (WCAG 2.4.7). */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-blue-700;
+    outline-style: solid;
+  }
+  /* blue-700 is only 2.7:1 on the dark header (needs 3:1): use white there (WCAG 1.4.11). */
+  header :focus-visible {
+    outline-color: #fff;
+  }
+}

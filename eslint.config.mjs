@@ -1,4 +1,6 @@
 import js from '@eslint/js';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
+import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -65,6 +67,13 @@ export default tseslint.config(
       'no-restricted-syntax': ['error', ...restrictedSyntax],
     },
   },
+  // The web app: hooks rules and accessibility rules (WCAG 2.1 AA is a requirement, NFR-07).
+  {
+    files: ['apps/web/**/*.{ts,tsx}'],
+    plugins: { 'react-hooks': reactHooks },
+    rules: { ...reactHooks.configs['recommended-latest'].rules },
+  },
+  { ...jsxA11y.flatConfigs.recommended, files: ['apps/web/**/*.{ts,tsx}'] },
   {
     files: ['apps/api/src/data/**'],
     rules: { 'no-restricted-imports': 'off', 'no-restricted-syntax': 'off' },
