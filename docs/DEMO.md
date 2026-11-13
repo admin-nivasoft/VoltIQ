@@ -55,6 +55,19 @@ The first run asks you to log in and name the project. The folder already contai
 3. Deploy. `apps/web/vercel.json` already sets the install command, the demo build command
    (`pnpm build:demo`), the output folder, the page rewrite, and `noindex` / security headers.
 
+**Already deployed (this repository's demo).** The static folder was uploaded as the Vercel project
+`ql-fleet-demo`; the public address is the project's production alias, `https://ql-fleet-demo.vercel.app`
+(the long per-deployment addresses are protected by Vercel login, so share the short one). To publish
+an update after changing the frontend:
+
+```bash
+cd "/Volumes/DevStorage/82 Volts/82-QualityLoop/qualityloop-claude-kit_1" && pnpm demo:build && rm -rf .tmp/ql-fleet-demo/assets && cp -R apps/web/dist/. .tmp/ql-fleet-demo/ && cd .tmp/ql-fleet-demo && npx vercel deploy --prod --yes
+```
+
+(`.tmp/ql-fleet-demo` holds the link to the Vercel project in its hidden `.vercel` folder and is not in
+Git. On a fresh checkout, create that folder, copy `apps/web/dist` into it and run the deploy command
+once; Vercel will ask you to create or link a project.)
+
 Notes:
 
 - The pages are marked `noindex`, so search engines are asked to skip them. Anyone with the link can
