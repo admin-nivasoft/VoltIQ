@@ -345,6 +345,9 @@ describe('OpenAPI', () => {
       '/alerts/{id}/acknowledge',
       '/fleet/summary',
       '/me',
+      '/notification-channels',
+      '/notification-channels/test',
+      '/notification-log',
       '/packs',
     ]);
     expect(JSON.stringify(doc)).not.toMatch(/mock-login|\/dev\/|supplier|cohort|cell[\s_-]?lot/i);
@@ -385,6 +388,11 @@ describe('route inventory and edge cases', () => {
     expect(routes.length).toBeGreaterThanOrEqual(7);
     for (const r of routes) {
       if (PUBLIC.has(r.url)) continue;
+      if (r.url.startsWith('/api/v1/dev/')) {
+        // Mock-only routes are deliberately undocumented, but must be guarded.
+        expect(r.guarded, `${r.method} ${r.url} has no preHandler guard`).toBe(true);
+        continue;
+      }
       expect(documented.has(`${r.method} ${r.url}`), `${r.method} ${r.url} is not documented`).toBe(
         true,
       );

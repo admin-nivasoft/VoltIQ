@@ -1,4 +1,5 @@
-import { z, Uuid, IsoTimestamp } from './common.js';
+import { z, Uuid, IsoTimestamp, SeveritySchema } from './common.js';
+import { pageOf } from './page.js';
 
 export const ChannelTypes = ['email', 'sms', 'webhook'] as const;
 export const ChannelTypeSchema = z.enum(ChannelTypes);
@@ -17,7 +18,7 @@ export function isValidTarget(type: ChannelType, target: string): boolean {
     case 'webhook':
       try {
         const u = new URL(target);
-        const host = u.hostname.toLowerCase();
+        const host = u.hostname.toLowerCase().replace(/\.+$/, '');
         const ipLiteral = /^\d+\.\d+\.\d+\.\d+$/.test(host) || host.startsWith('[');
         // Cheap contract-level SSRF guards; DNS-time blocking of private ranges comes later (D-07).
         return (
@@ -25,7 +26,9 @@ export function isValidTarget(type: ChannelType, target: string): boolean {
           !u.username &&
           !u.password &&
           !ipLiteral &&
+          host.includes('.') &&
           host !== 'localhost' &&
+          !/\.(localhost|local|internal|localdomain)$/.test(host) &&
           !host.endsWith('.localhost')
         );
       } catch {
@@ -72,3 +75,42 @@ export const NotificationLogEntrySchema = z
   })
   .openapi('NotificationLogEntry');
 export type NotificationLogEntry = z.infer<typeof NotificationLogEntrySchema>;
+
+/** PUT /notification-channels: the user's whole set, at most one channel per type. */
+export const NotificationChannelsPutSchema = z
+  .object({ channels: z.array(NotificationChannelInputSchema).max(ChannelTypes.length) })
+  .superRefine((b, ctx) => {
+    const types = b.channels.map((c) => c.type);
+    if (new Set(types).size !== types.length) {
+      ctx.addIssue({ code: 'custom', path: ['channels'], message: 'At most one channel per type' });
+    }
+  })
+  .openapi('NotificationChannelsPut');
+export type NotificationChannelsPut = z.infer<typeof NotificationChannelsPutSchema>;
+
+export const NotificationTestRequestSchema = z
+  .object({ type: ChannelTypeSchema })
+  .openapi('NotificationTestRequest');
+
+export const NotificationTestResultSchema = z
+  .object({
+    channel: ChannelTypeSchema,
+    status: z.enum(['sent', 'failed']),
+    error: z.string().nullable(),
+    at: IsoTimestamp,
+  })
+  .openapi('NotificationTestResult');
+export type NotificationTestResult = z.infer<typeof NotificationTestResultSchema>;
+
+export const NotificationLogPageSchema = pageOf(NotificationLogEntrySchema).openapi(
+  'NotificationLogPage',
+);
+
+/** POST /dev/simulate-alert (mock mode only, platform_admin). The one place a consumer id is accepted in a body (D-04). */
+export const SimulateAlertRequestSchema = z
+  .object({ consumerId: Uuid, severity: SeveritySchema.default('high') })
+  .strict();
+export const SimulateAlertResultSchema = z.object({
+  alertId: Uuid,
+  jobsQueued: z.number().int().min(0),
+});

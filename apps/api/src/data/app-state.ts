@@ -7,6 +7,7 @@ import {
   type Role,
 } from '@ql/contracts';
 import { selectAlert, UUID_RE } from './alert-sql.ts';
+import { createOutboxMethods } from './outbox.ts';
 import type { Pool } from './pool.ts';
 import { withTenant, type Tx } from './tenant.ts';
 import { PageQuerySchema } from '@ql/contracts';
@@ -234,6 +235,8 @@ export function createAppStateRepository(pool: Pool): AppStateRepository {
         );
       });
     },
+
+    ...createOutboxMethods(pool),
 
     async ping() {
       await pool.query('SELECT 1');

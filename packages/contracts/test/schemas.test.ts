@@ -93,6 +93,10 @@ describe('contracts hardening (security review, step 1)', () => {
     });
     expect('id' in parsed).toBe(false);
     for (const t of [
+      'https://localhost./x',
+      'https://intranet/x',
+      'https://metadata.google.internal/x',
+      'https://printer.local/x',
       'https://localhost/x',
       'https://127.0.0.1/x',
       'https://u:p@example.com/x',

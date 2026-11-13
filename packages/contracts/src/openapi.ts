@@ -4,6 +4,13 @@ import { AlertPageSchema, AlertQuerySchema, AlertSchema } from './alerts.js';
 import { ErrorSchema } from './error.js';
 import { FleetSummarySchema, PackPageSchema, PackQuerySchema } from './fleet.js';
 import { MeSchema } from './me.js';
+import {
+  NotificationChannelSchema,
+  NotificationChannelsPutSchema,
+  NotificationLogPageSchema,
+  NotificationTestRequestSchema,
+  NotificationTestResultSchema,
+} from './notifications.js';
 import { PageQuerySchema } from './page.js';
 
 /**
@@ -92,6 +99,71 @@ export function buildOpenApiDocument() {
       403: err('Missing permission, or the X-Requested-With header is absent'),
       404: err('No such alert'),
       409: err('The alert is resolved'),
+    },
+  });
+
+  const hdr = { headers: z.object({ 'X-Requested-With': z.literal('ql') }) };
+  registry.registerPath({
+    method: 'get',
+    path: '/notification-channels',
+    summary: "The signed-in user's own notification channels (permission channels.manage_own)",
+    security,
+    responses: {
+      200: { description: 'OK', content: json(z.array(NotificationChannelSchema)) },
+      ...common,
+      403: err('Missing permission'),
+    },
+  });
+  registry.registerPath({
+    method: 'put',
+    path: '/notification-channels',
+    summary: "Replace the signed-in user's channels (permission channels.manage_own)",
+    description:
+      'Targets are validated by type: an email address, an E.164 phone number, or an https URL. At most one channel per type. The user is always the signed-in user.',
+    security,
+    request: {
+      ...hdr,
+      body: { content: { 'application/json': { schema: NotificationChannelsPutSchema } } },
+    },
+    responses: {
+      200: { description: 'OK', content: json(z.array(NotificationChannelSchema)) },
+      400: err('Invalid channels'),
+      ...common,
+      403: err('Missing permission, or the X-Requested-With header is absent'),
+    },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: '/notification-channels/test',
+    summary:
+      'Send a test message through one of your channels and report the result (permission channels.manage_own)',
+    security,
+    request: {
+      ...hdr,
+      body: { content: { 'application/json': { schema: NotificationTestRequestSchema } } },
+    },
+    responses: {
+      200: {
+        description: 'The delivery result, which may be a failure',
+        content: json(NotificationTestResultSchema),
+      },
+      400: err('Invalid request'),
+      ...common,
+      403: err('Missing permission, or the X-Requested-With header is absent'),
+      404: err('You have no channel of that type'),
+    },
+  });
+  registry.registerPath({
+    method: 'get',
+    path: '/notification-log',
+    summary: 'Delivery log for the consumer, newest first (permission notifications.view_log)',
+    security,
+    request: { query: PageQuerySchema },
+    responses: {
+      200: { description: 'OK', content: json(NotificationLogPageSchema) },
+      400: err('Invalid query'),
+      ...common,
+      403: err('Missing permission'),
     },
   });
 

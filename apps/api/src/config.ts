@@ -78,6 +78,19 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
   if (e.NODE_ENV === 'production' && e.ENABLE_DEV_ENDPOINTS) {
     problems.push('ENABLE_DEV_ENDPOINTS=true is not allowed when NODE_ENV=production');
   }
+  if (e.NODE_ENV === 'production') {
+    for (const [name, v] of [
+      ['NOTIFY_EMAIL', e.NOTIFY_EMAIL],
+      ['NOTIFY_SMS', e.NOTIFY_SMS],
+      ['NOTIFY_WEBHOOK', e.NOTIFY_WEBHOOK],
+    ] as const) {
+      if (v === 'mock') {
+        problems.push(
+          `${name}=mock is not allowed when NODE_ENV=production (alerts would be logged as sent but never delivered)`,
+        );
+      }
+    }
+  }
   if (e.TRUST_PROXY === 'true') {
     problems.push(
       'TRUST_PROXY must be "false" or the proxy address or subnet, never a blanket "true"',

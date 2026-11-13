@@ -89,7 +89,7 @@ Acceptance:
 - [x] The D-12 canary crawl passes
 
 ## Step 6 · Notifications
-Status: todo
+Status: done
 Run with: model=sonnet effort=medium
 
 Build:
@@ -98,9 +98,9 @@ Build:
 - The D-07 outbox and worker, the channel endpoints, the test message endpoint, `GET /notification-log` and `POST /dev/simulate-alert` (D-04).
 
 Acceptance:
-- [ ] Unit tests: retries with backoff, idempotent jobs, only users with `alerts.view` notified
-- [ ] Integration test: a simulated alert to a "fail" target produces 3 attempts in the log and status failed
-- [ ] Integration test: jobs survive an API restart (stop the worker, start it again, and the jobs complete)
+- [x] Unit tests: retries with backoff, idempotent jobs, only users with `alerts.view` notified
+- [x] Integration test: a simulated alert to a "fail" target produces 3 attempts in the log and status failed
+- [x] Integration test: jobs survive an API restart (stop the worker, start it again, and the jobs complete)
 
 ## Step 7 · Frontend shell
 Status: todo
@@ -202,6 +202,14 @@ _Claude appends one line per decision: date, step, decision, reason._
 - 2026-11-13 · step 5 · `buildApp` records a `routeInventory`; a test fails if any `/api/v1` route (other than sign-in, sign-out, `/me` and the spec) is undocumented or has no permission guard. Later steps get this check for free.
 - 2026-11-13 · step 5 · The mock adapter refuses a consumer with more than 2000 packs (it sorts and pages in memory). A real adapter, or a larger demo, must push sorting and paging into its source or cache the computed list.
 - 2026-11-13 · step 5 · Carried to step 6: a route-level test that a technician sending another user's id in `PUT /notification-channels` changes only their own channels (build the Principal from `req.auth`).
+
+- 2026-11-13 · step 6 · Outbox: the attempt is counted when a job is claimed (not when recorded), so a crash after sending still uses an attempt; a job with no attempts left, or whose channel was disabled or removed, is failed at claim time with a log row (`delivery_failed` / `channel_disabled`). Unstarted jobs in a claimed batch are handed back with their attempt returned (`releaseJobs`).
+- 2026-11-13 · step 6 · Backoff: after a failure wait 1 s before attempt 2 and 5 s before attempt 3; 25 s is reserved for a 4th. All due times, leases and backoff use the database clock; the only override is a test hook that is 0 in production.
+- 2026-11-13 · step 6 · Worker safety: sends time out at min(10 s, lease/4) and the provider is given an `AbortSignal`; the worker never starts a send that could outlive the lease (it reserves a recording budget); `stop()` starts nothing new and waits at most 10 s. **A real provider must honour the abort signal** (pass it to fetch), or a timed-out send may still arrive and the retry duplicate it.
+- 2026-11-13 · step 6 · Known limits, accepted for the mock build: (a) an attempt lost to a crash or a lapsed lease has no `notification_log` row (the next attempt number simply skips it); (b) a user's `alerts.view` is checked when the job is queued, not again at send time (window: lease plus backoff, under a minute); (c) delivery goes to the channel's current target and fails if the channel is disabled or removed.
+- 2026-11-13 · step 6 · Config: `NOTIFY_*=mock` is refused when `NODE_ENV=production`, and only `mock` exists, so a production start is impossible until a real provider is added; that is the intended fail-closed behaviour. `POST /notification-channels/test` is limited to 5 a minute per user. Still to add with a real SMS provider: a daily per-user cap and target verification before a channel is enabled. Webhook SSRF protection at connect time (resolve DNS, block private ranges, no redirects) is still deferred (D-07).
+- 2026-11-13 · step 6 · `POST /dev/simulate-alert` is guarded by a preHandler (platform_admin only), audits before it acts, and is deliberately absent from OpenAPI. The route inventory test requires every `/api/v1/dev/*` route to be guarded.
+- 2026-11-13 · step 6 · Nginx (step 10) and the Compose API service must run exactly one API replica or several: both are safe (SKIP LOCKED plus leases), but set `TRUST_PROXY` as noted in step 3.
 
 ## Blockers
 _Claude records anything that stopped a step, and what is needed to unblock it._

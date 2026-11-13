@@ -32,6 +32,14 @@ export class PolicyService {
     return (await this.permissionsFor(role)).includes(permission);
   }
 
+  /** Consumer roles that hold a permission (platform_admin belongs to no consumer, so is never included). */
+  async rolesWith(permission: Permission): Promise<Role[]> {
+    const { roles } = await this.current();
+    return (Object.keys(roles) as Role[]).filter(
+      (r) => r !== 'platform_admin' && roles[r].includes(permission),
+    );
+  }
+
   invalidate(): void {
     this.cached = null;
   }

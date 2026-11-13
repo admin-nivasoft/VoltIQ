@@ -11,6 +11,12 @@ import { PolicyService } from './modules/access/policy.ts';
 import { registerAccessRoutes } from './modules/access/routes.ts';
 import { registerAlertRoutes } from './modules/alerts/routes.ts';
 import { registerFleetRoutes } from './modules/fleet/routes.ts';
+import { registerDevRoutes } from './modules/notifications/dev-routes.ts';
+import {
+  createProviderRegistry,
+  type ProviderRegistry,
+} from './modules/notifications/providers.ts';
+import { registerNotificationRoutes } from './modules/notifications/routes.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -23,6 +29,8 @@ export interface AppDeps {
   config: Config;
   repo: AppStateRepository;
   fleet: FleetDataSource;
+  /** Defaults to the providers named in config. */
+  providers?: ProviderRegistry;
   logger?: boolean;
 }
 
@@ -30,6 +38,7 @@ export async function buildApp({
   config,
   repo,
   fleet,
+  providers = createProviderRegistry(config.notify),
   logger = false,
 }: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
@@ -75,6 +84,8 @@ export async function buildApp({
       registerAccessRoutes(api, { config, repo, policy, tokens });
       registerFleetRoutes(api, { fleet, policy });
       registerAlertRoutes(api, { fleet, repo, policy });
+      registerNotificationRoutes(api, { repo, policy, providers });
+      if (config.mockEnabled) registerDevRoutes(api, { repo, policy });
       // The API description lists no consumer data and no mock endpoints, so it is public.
       const openapi = buildOpenApiDocument();
       api.get('/openapi.json', async () => openapi);

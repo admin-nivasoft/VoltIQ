@@ -30,6 +30,16 @@ describe('startup config (D-08)', () => {
     ['unknown AUTH_PROVIDER', { AUTH_PROVIDER: 'ldap' }],
     ['unset NODE_ENV', { NODE_ENV: undefined }],
     ['TRUST_PROXY=true', { TRUST_PROXY: 'true' }],
+    [
+      'mock email provider in production',
+      {
+        NODE_ENV: 'production',
+        AUTH_PROVIDER: 'entra',
+        NOTIFY_EMAIL: 'mock',
+        NOTIFY_SMS: 'mock',
+        NOTIFY_WEBHOOK: 'mock',
+      },
+    ],
     ['unknown DATA_PROVIDER', { DATA_PROVIDER: 'oracle' }],
     ['unknown notification provider', { NOTIFY_SMS: 'twilio' }],
     ['missing DATABASE_URL', { DATABASE_URL: undefined }],

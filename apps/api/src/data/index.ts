@@ -18,6 +18,10 @@ export type {
   AcknowledgeResult,
   NewLogEntry,
   Principal,
+  ClaimedJob,
+  NewAlert,
+  AttemptPlan,
+  ClaimOptions,
 } from './types.ts';
 
 /** Registry keyed by DATA_PROVIDER. An unknown value already failed config loading. */

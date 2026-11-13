@@ -33,6 +33,47 @@ export type AcknowledgeResult =
   /** Missing, or another consumer's alert: the caller answers 404 for both. */
   | { kind: 'not_found' };
 
+export interface ClaimedJob {
+  id: string;
+  alertId: string;
+  userId: string;
+  channel: NotificationChannel['type'];
+  target: string;
+  attempts: number;
+  severity: Alert['severity'];
+  title: string;
+  description: string;
+  recommendedAction: string;
+}
+
+export interface NewAlert {
+  /** Optional: an in-service pack of the consumer. When omitted one is chosen. */
+  packId?: string;
+  severity: Alert['severity'];
+  title: string;
+  description: string;
+  recommendedAction: string;
+  modelVersion: string;
+  confidence: number | null;
+}
+
+export interface AttemptPlan {
+  status: 'sent' | 'retry' | 'failed';
+  /** Wait before the next attempt, from the database's now(). Null unless status is 'retry'. */
+  retryAfterMs: number | null;
+}
+
+export interface ClaimOptions {
+  limit: number;
+  leaseMs: number;
+  maxAttempts: number;
+  /**
+   * Test hook: shifts the effective "now" from the database clock. Always 0 in production, so
+   * due times, leases and backoff all use one clock (the database's), even with several replicas.
+   */
+  shiftMs?: number;
+}
+
 export interface NewLogEntry {
   alertId: string | null;
   kind: 'alert' | 'test';
@@ -67,6 +108,47 @@ export interface AppStateRepository {
     principal: Principal,
     channels: NotificationChannelInput[],
   ): Promise<NotificationChannel[]>;
+
+  /**
+   * Outbox (D-07). The alert and its jobs are written in one transaction. Only users whose role is in
+   * notifyRoles (those holding alerts.view) and who have an enabled channel get a job.
+   * Returns null when the consumer has no in-service pack to attach the alert to.
+   */
+  createAlertWithJobs(
+    consumerId: string,
+    alert: NewAlert,
+    notifyRoles: Role[],
+  ): Promise<{ alertId: string; jobsQueued: number } | null>;
+  /** Idempotent: a second call for the same alert creates no duplicates (UNIQUE alert, user, channel). */
+  enqueueJobsForAlert(consumerId: string, alertId: string, notifyRoles: Role[]): Promise<number>;
+  /**
+   * Claims due jobs with FOR UPDATE SKIP LOCKED, counts the attempt and leases them in one step,
+   * so a crash after sending still uses up an attempt. Jobs out of attempts, or whose channel was
+   * disabled or removed, are failed here instead of being sent. The target is the channel's current one.
+   */
+  claimDueJobs(consumerId: string, opts: ClaimOptions): Promise<ClaimedJob[]>;
+  /**
+   * Gives back jobs that were claimed but never started (the worker stopped early, or is shutting
+   * down): the attempt counted at claim is returned and the job is due again at once.
+   */
+  releaseJobs(consumerId: string, jobs: ClaimedJob[], shiftMs?: number): Promise<void>;
+  /** Writes the attempt to notification_log and updates the job in one transaction. No-op if already handled. */
+  recordAttempt(
+    consumerId: string,
+    job: ClaimedJob,
+    result: { ok: boolean; error: string | null },
+    plan: AttemptPlan,
+    shiftMs?: number,
+  ): Promise<void>;
+  /** A test send: the log entry and its audit event in one transaction (D-13). */
+  recordTestSend(
+    principal: Principal,
+    entry: {
+      channel: NotificationChannel['type'];
+      status: 'sent' | 'failed';
+      error: string | null;
+    },
+  ): Promise<void>;
 
   listNotificationLog(consumerId: string, q: PageQuery): Promise<Page<NotificationLogEntry>>;
   appendNotificationLog(consumerId: string, entry: NewLogEntry): Promise<void>;

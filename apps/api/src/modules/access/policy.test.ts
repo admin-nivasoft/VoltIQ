@@ -46,6 +46,19 @@ describe('PolicyService (D-01)', () => {
     await expect(new PolicyService(broken).permissionsFor('technician')).rejects.toThrow();
   });
 
+  it('rolesWith lists the consumer roles holding a permission, never platform_admin', async () => {
+    const svc = new PolicyService(repoWith([v1]));
+    expect((await svc.rolesWith('alerts.view')).sort()).toEqual([
+      'consumer_admin',
+      'fleet_manager',
+      'technician',
+    ]);
+    expect(await svc.rolesWith('alerts.acknowledge')).toEqual(
+      expect.not.arrayContaining(['technician']),
+    );
+    expect(await svc.rolesWith('permissions.manage')).toEqual([]);
+  });
+
   it('has() answers permission checks', async () => {
     const svc = new PolicyService(repoWith([v1]));
     expect(await svc.has('fleet_manager', 'alerts.acknowledge')).toBe(true);
