@@ -3,6 +3,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   CheckCircle2,
+  XCircle,
   CircleHelp,
   Clock,
   Info,
@@ -148,5 +149,20 @@ export function TrendBadge({ trend }: { trend: PackSummary['trend'] }) {
       </Badge>
       {slope ? <span className="text-sm text-slate-700">{slope}</span> : null}
     </span>
+  );
+}
+
+/** Delivery result in words and an icon: Delivered or Failed, with the attempt number. */
+export function DeliveryBadge({ status, attempt }: { status: 'sent' | 'failed'; attempt: number }) {
+  const ok = status === 'sent';
+  return (
+    <Badge
+      icon={ok ? CheckCircle2 : XCircle}
+      tone={
+        ok ? 'border-green-400 bg-green-50 text-green-900' : 'border-red-300 bg-red-50 text-red-900'
+      }
+    >
+      {`${ok ? 'Delivered' : 'Failed'}, attempt ${attempt}`}
+    </Badge>
   );
 }

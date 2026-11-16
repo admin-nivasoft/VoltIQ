@@ -7,6 +7,7 @@ import type {
   Page,
   PageQuery,
   Role,
+  RolePolicyUpdate,
 } from '@ql/contracts';
 
 export interface UserRef {
@@ -97,6 +98,12 @@ export interface AppStateRepository {
   getLatestPolicy(): Promise<unknown>;
   recordAudit(consumerId: string, userId: string, action: string, object: string): Promise<void>;
   recordPlatformAudit(userId: string, action: string, object: string): Promise<void>;
+  /**
+   * Publishes a new role-policy version and writes the platform audit event in one transaction (D-01,
+   * D-13). Only a platform_admin may be the actor, and never from inside a tenant context: both
+   * database functions refuse otherwise. Old versions are never overwritten. Returns the new version.
+   */
+  publishPolicy(userId: string, roles: RolePolicyUpdate['roles']): Promise<number>;
   ping(): Promise<void>;
 
   /** Idempotent acknowledge with an audit event in the same transaction (D-10, D-13). */

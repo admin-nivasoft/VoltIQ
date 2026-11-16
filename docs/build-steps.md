@@ -129,7 +129,7 @@ Acceptance:
 - [x] axe reports no serious or critical issues at 390, 768 and 1440 px
 
 ## Step 9 · Settings
-Status: todo
+Status: in-progress
 Run with: model=sonnet effort=low
 
 Build:

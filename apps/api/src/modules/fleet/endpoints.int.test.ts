@@ -341,6 +341,7 @@ describe('OpenAPI', () => {
     const doc = r.json();
     expect(doc.openapi).toMatch(/^3\.1/);
     expect(Object.keys(doc.paths).sort()).toEqual([
+      '/admin/permissions',
       '/alerts',
       '/alerts/{id}/acknowledge',
       '/fleet/summary',

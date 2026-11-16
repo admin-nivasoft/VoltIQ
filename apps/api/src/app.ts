@@ -9,6 +9,7 @@ import { registerErrorHandling } from './errors.ts';
 import { createTokens, registerAuth } from './modules/access/auth.ts';
 import { PolicyService } from './modules/access/policy.ts';
 import { registerAccessRoutes } from './modules/access/routes.ts';
+import { registerAdminRoutes } from './modules/access/admin-routes.ts';
 import { registerAlertRoutes } from './modules/alerts/routes.ts';
 import { registerFleetRoutes } from './modules/fleet/routes.ts';
 import { registerDevRoutes } from './modules/notifications/dev-routes.ts';
@@ -82,6 +83,7 @@ export async function buildApp({
   await app.register(
     async (api) => {
       registerAccessRoutes(api, { config, repo, policy, tokens });
+      registerAdminRoutes(api, { repo, policy });
       registerFleetRoutes(api, { fleet, policy });
       registerAlertRoutes(api, { fleet, repo, policy });
       registerNotificationRoutes(api, { repo, policy, providers });

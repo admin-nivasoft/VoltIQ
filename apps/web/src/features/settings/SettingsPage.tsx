@@ -1,23 +1,28 @@
 import { PageHeading } from '../../components/ui/PageHeading';
 import { EmptyState } from '../../components/ui/states';
 import { useCan } from '../../lib/auth/session';
+import { ChannelsSection } from './ChannelsSection';
+import { LogSection } from './LogSection';
+import { PolicySection } from './PolicySection';
 
+/** Each section is shown only to people holding its permission; the API enforces the same rules. */
 export function SettingsPage() {
-  const allowed = useCan('channels.manage_own', 'permissions.manage', 'notifications.view_log');
+  const channels = useCan('channels.manage_own');
+  const log = useCan('notifications.view_log');
+  const policy = useCan('permissions.manage');
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       <PageHeading>Settings</PageHeading>
-      {allowed ? (
-        <EmptyState
-          title="Settings are on their way"
-          description="Notification channels, the delivery log and role policy arrive in a later build step."
-        />
-      ) : (
+      {channels ? <ChannelsSection /> : null}
+      {log ? <LogSection /> : null}
+      {policy ? <PolicySection /> : null}
+      {!channels && !log && !policy ? (
         <EmptyState
           title="You don't have access to settings"
           description="Ask your administrator if you need it."
         />
-      )}
+      ) : null}
     </div>
   );
 }

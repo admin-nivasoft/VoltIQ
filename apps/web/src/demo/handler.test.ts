@@ -212,3 +212,139 @@ describe('demo API: permissions follow the real policy', () => {
     }
   });
 });
+
+describe('demo API: settings', () => {
+  const channelsBody = (...c: { type: string; target: string; enabled?: boolean }[]) => ({
+    channels: c.map((x) => ({ enabled: true, ...x })),
+  });
+
+  it('each user manages only their own channels; empty to start (fleet managers get one email)', async () => {
+    await login(as('A', 'technician'));
+    expect((await call('GET', '/notification-channels')).json).toEqual([]);
+    expect(
+      (
+        await call(
+          'PUT',
+          '/notification-channels',
+          channelsBody({ type: 'email', target: 'arjun@example.test' }),
+        )
+      ).status,
+    ).toBe(200);
+    await login(as('A', 'fleet_manager'));
+    const fm = (await call('GET', '/notification-channels')).json as { type: string }[];
+    expect(fm.map((c) => c.type)).toEqual(['email']);
+    await login(as('A', 'technician'));
+    expect(
+      ((await call('GET', '/notification-channels')).json as { target: string }[])[0]!.target,
+    ).toBe('arjun@example.test');
+  });
+
+  it.each([
+    [{ type: 'email', target: 'nope' }],
+    [{ type: 'sms', target: '98000' }],
+    [{ type: 'webhook', target: 'http://example.test/x' }],
+    [{ type: 'webhook', target: 'https://localhost/x' }],
+  ])('rejects the channel %j with a 400', async (c) => {
+    await login(as('A', 'technician'));
+    expect((await call('PUT', '/notification-channels', channelsBody(c))).status).toBe(400);
+  });
+
+  it('a test to a normal address works; to an address containing "fail" it fails, and both show in the log', async () => {
+    await login(as('A', 'technician'));
+    await call(
+      'PUT',
+      '/notification-channels',
+      channelsBody(
+        { type: 'email', target: 'ok@example.test' },
+        { type: 'webhook', target: 'https://hooks.example.test/fail/x' },
+      ),
+    );
+    expect(
+      (await call('POST', '/notification-channels/test', { type: 'email' })).json,
+    ).toMatchObject({ status: 'sent', error: null });
+    expect(
+      (await call('POST', '/notification-channels/test', { type: 'webhook' })).json,
+    ).toMatchObject({ status: 'failed', error: 'mock_delivery_failed' });
+    expect((await call('POST', '/notification-channels/test', { type: 'sms' })).status).toBe(404);
+    await login(as('A', 'consumer_admin'));
+    const log = (await call('GET', '/notification-log')).json as {
+      items: { kind: string; status: string; channel: string }[];
+    };
+    expect(log.items.slice(0, 2).map((e) => `${e.channel}:${e.status}`)).toEqual([
+      'webhook:failed',
+      'email:sent',
+    ]);
+  });
+
+  it('the delivery log is for consumer admins only, per company, and has failures to look at', async () => {
+    await login(as('A', 'fleet_manager'));
+    expect((await call('GET', '/notification-log')).status).toBe(403);
+    await login(as('A', 'consumer_admin'));
+    const a = (await call('GET', '/notification-log?pageSize=100')).json as {
+      items: { id: string; status: string; attempt: number }[];
+      total: number;
+    };
+    expect(a.items.some((e) => e.status === 'failed' && e.attempt === 3)).toBe(true);
+    await login(as('B', 'consumer_admin'));
+    const b = (await call('GET', '/notification-log?pageSize=100')).json as {
+      items: { id: string }[];
+    };
+    expect(b.items.some((e) => a.items.some((x) => x.id === e.id))).toBe(false);
+    expect((await call('GET', '/notification-log?pageSize=101')).status).toBe(400);
+  });
+
+  it('only the platform admin can read or change the policy; a consumer admin gets 403', async () => {
+    for (const role of ['fleet_manager', 'technician', 'consumer_admin'] as const) {
+      await login(as('A', role));
+      expect((await call('GET', '/admin/permissions')).status, role).toBe(403);
+      expect((await call('PUT', '/admin/permissions', { roles: policy.roles })).status, role).toBe(
+        403,
+      );
+    }
+    await login(as(null, 'platform_admin'));
+    expect((await call('GET', '/admin/permissions')).status).toBe(200);
+  });
+
+  it('an edit to the policy takes effect straight away for everyone, is versioned, and is refused if it breaks the rules', async () => {
+    await login(as(null, 'platform_admin'));
+    const roles = structuredClone(policy.roles);
+    roles.fleet_manager = roles.fleet_manager.filter((p) => p !== 'alerts.acknowledge');
+    const saved = (await call('PUT', '/admin/permissions', { roles })).json as {
+      policy: { version: number };
+    };
+    expect(saved.policy.version).toBe(2);
+
+    await login(as('A', 'fleet_manager'));
+    expect(MeSchema.parse((await call('GET', '/me')).json).permissions).not.toContain(
+      'alerts.acknowledge',
+    );
+    const open = AlertPageSchema.parse((await call('GET', '/alerts?status=open')).json).items[0]!;
+    expect((await call('POST', `/alerts/${open.id}/acknowledge`)).status).toBe(403);
+
+    await login(as(null, 'platform_admin'));
+    const bad = structuredClone(policy.roles);
+    bad.technician.push('permissions.manage');
+    expect((await call('PUT', '/admin/permissions', { roles: bad })).status).toBe(400);
+    expect(
+      ((await call('GET', '/admin/permissions')).json as { policy: { version: number } }).policy
+        .version,
+    ).toBe(2);
+  });
+
+  it('Reset demo restores the policy, channels and log too', async () => {
+    await login(as(null, 'platform_admin'));
+    const roles = structuredClone(policy.roles);
+    roles.technician.push('alerts.acknowledge');
+    await call('PUT', '/admin/permissions', { roles });
+    resetDemo();
+    await login(as(null, 'platform_admin'));
+    expect(
+      ((await call('GET', '/admin/permissions')).json as { policy: { version: number } }).policy
+        .version,
+    ).toBe(1);
+    await login(as('A', 'technician'));
+    expect(MeSchema.parse((await call('GET', '/me')).json).permissions).not.toContain(
+      'alerts.acknowledge',
+    );
+  });
+});

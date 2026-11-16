@@ -4,3 +4,7 @@ coverage
 pnpm-lock.yaml
 *.md
 .claude
+.tmp
+test-results
+test-results-demo
+playwright-report

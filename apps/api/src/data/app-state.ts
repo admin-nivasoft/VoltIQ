@@ -236,6 +236,32 @@ export function createAppStateRepository(pool: Pool): AppStateRepository {
       });
     },
 
+    async publishPolicy(userId, roles) {
+      // No tenant is set on this connection, which is what the platform functions require.
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const v = await client.query<{ v: number }>(
+          'SELECT role_policy_publish($1::jsonb, $2) AS v',
+          [JSON.stringify({ roles }), userId],
+        );
+        const version = v.rows[0]?.v;
+        if (typeof version !== 'number') throw new Error('role_policy_publish returned no version');
+        await client.query('SELECT audit_platform_event($1, $2, $3)', [
+          userId,
+          'policy.update',
+          `role_policy:${version}`,
+        ]);
+        await client.query('COMMIT');
+        return version;
+      } catch (err) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw err;
+      } finally {
+        client.release();
+      }
+    },
+
     ...createOutboxMethods(pool),
 
     async ping() {

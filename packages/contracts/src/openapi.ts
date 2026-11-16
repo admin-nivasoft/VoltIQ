@@ -12,6 +12,7 @@ import {
   NotificationTestResultSchema,
 } from './notifications.js';
 import { PageQuerySchema } from './page.js';
+import { RolePolicyResponseSchema, RolePolicyUpdateSchema } from './policy.js';
 
 /**
  * Builds the OpenAPI document. It lists only endpoints that exist: a test compares it with the
@@ -164,6 +165,37 @@ export function buildOpenApiDocument() {
       400: err('Invalid query'),
       ...common,
       403: err('Missing permission'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: '/admin/permissions',
+    summary: 'The latest role policy (permission permissions.manage, platform administrators only)',
+    security,
+    responses: {
+      200: { description: 'OK', content: json(RolePolicyResponseSchema) },
+      ...common,
+      403: err('Missing permission'),
+    },
+  });
+  registry.registerPath({
+    method: 'put',
+    path: '/admin/permissions',
+    summary:
+      'Publish a new role policy version (permission permissions.manage, platform administrators only)',
+    description:
+      'Saves a new version and writes an audit event; old versions are kept. Only platform_admin may hold permissions.manage, and platform_admin may hold nothing else. The server assigns the version and the author.',
+    security,
+    request: {
+      ...hdr,
+      body: { content: { 'application/json': { schema: RolePolicyUpdateSchema } } },
+    },
+    responses: {
+      200: { description: 'The saved version', content: json(RolePolicyResponseSchema) },
+      400: err('Invalid policy'),
+      ...common,
+      403: err('Missing permission, or the X-Requested-With header is absent'),
     },
   });
 

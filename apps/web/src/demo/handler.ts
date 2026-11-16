@@ -2,7 +2,17 @@
 // It answers the same paths with the same shapes (the app still validates every response with the
 // shared contracts schemas) and applies the same permission rules from config/permissions.json.
 // Nothing leaves the browser, and nothing is saved: a reload starts again.
-import type { Alert, FleetSummary, Me, PackSummary } from '@ql/contracts';
+import {
+  NotificationChannelsPutSchema,
+  NotificationTestRequestSchema,
+  RolePolicyUpdateSchema,
+  type Alert,
+  type FleetSummary,
+  type Me,
+  type NotificationChannel,
+  type NotificationLogEntry,
+  type PackSummary,
+} from '@ql/contracts';
 import policy from '../../../../config/permissions.json';
 import {
   buildAlerts,
@@ -29,6 +39,44 @@ interface Tenant {
 }
 let tenants: Map<string, Tenant> | null = null;
 let currentUserId: string | null | undefined;
+
+// Settings state, all in memory (reset with the rest of the demo).
+const channelsByUser = new Map<string, NotificationChannel[]>();
+const logByConsumer = new Map<string, NotificationLogEntry[]>();
+let policyState = freshPolicy();
+
+function freshPolicy() {
+  return { version: 1, roles: structuredClone(policy.roles) as Record<string, string[]> };
+}
+
+function seedLog(consumerId: string): NotificationLogEntry[] {
+  const now = Date.now();
+  const e = (n: number, over: Partial<NotificationLogEntry>): NotificationLogEntry => ({
+    // The first character differs per company (a, b, c), so ids never repeat across companies.
+    id: `5${consumerId[0]}000000-0000-4000-9000-${String(n).padStart(12, '0')}`,
+    alertId: null,
+    kind: 'alert',
+    channel: 'email',
+    status: 'sent',
+    attempt: 1,
+    error: null,
+    at: new Date(now - n * 3_600_000).toISOString(),
+    ...over,
+  });
+  return [
+    e(1, { kind: 'test' }),
+    e(5, { channel: 'webhook', status: 'failed', attempt: 3, error: 'mock_delivery_failed' }),
+    e(6, { channel: 'webhook', status: 'failed', attempt: 2, error: 'mock_delivery_failed' }),
+    e(7, { channel: 'webhook', status: 'failed', attempt: 1, error: 'mock_delivery_failed' }),
+    e(30, { channel: 'sms' }),
+    e(31, { channel: 'email' }),
+  ];
+}
+function logFor(consumerId: string): NotificationLogEntry[] {
+  let l = logByConsumer.get(consumerId);
+  if (!l) logByConsumer.set(consumerId, (l = seedLog(consumerId)));
+  return l;
+}
 
 function world(): Map<string, Tenant> {
   if (!tenants) {
@@ -65,6 +113,9 @@ function writeUser(id: string | null) {
 /** Forgets the demo user and every change made, then lets the caller reload. */
 export function resetDemo(): void {
   tenants = null;
+  channelsByUser.clear();
+  logByConsumer.clear();
+  policyState = freshPolicy();
   writeUser(null);
 }
 
@@ -76,8 +127,7 @@ const reply = (status: number, body?: unknown) =>
 const fail = (status: number, code: string, message: string) =>
   reply(status, { error: { code, message } });
 
-const permissionsOf = (u: DemoUser): string[] =>
-  (policy.roles as Record<string, string[]>)[u.role] ?? [];
+const permissionsOf = (u: DemoUser): string[] => policyState.roles[u.role] ?? [];
 
 function intParam(url: URL, name: string, def: number, min: number, max: number): number | null {
   const raw = url.searchParams.get(name);
@@ -134,6 +184,20 @@ function summaryFor(t: Tenant): FleetSummary {
     ).length,
     asOf: new Date().toISOString(),
   };
+}
+
+/** Fleet managers start with one email channel, so the form is not empty on first look. */
+function defaultChannels(u: DemoUser): NotificationChannel[] {
+  return u.role === 'fleet_manager'
+    ? [
+        {
+          id: crypto.randomUUID(),
+          type: 'email',
+          target: `${u.name.toLowerCase().replace(/[^a-z]+/g, '.')}@example.test`,
+          enabled: true,
+        },
+      ]
+    : [];
 }
 
 function route(method: string, path: string, body: unknown): Response {
@@ -245,6 +309,92 @@ function route(method: string, path: string, body: unknown): Response {
           (key(a) === key(b) ? 1 : sign),
       );
     return reply(200, paged(rows, page, size));
+  }
+
+  // ---- Settings ----
+  if (p === '/notification-channels' && method === 'GET') {
+    return (
+      need('channels.manage_own') ??
+      reply(200, channelsByUser.get(user.id) ?? defaultChannels(user))
+    );
+  }
+  if (p === '/notification-channels' && method === 'PUT') {
+    const denied = need('channels.manage_own');
+    if (denied) return denied;
+    const parsed = NotificationChannelsPutSchema.safeParse(body);
+    if (!parsed.success) return fail(400, 'validation_failed', 'The request is invalid');
+    // The user is always the signed-in user: the body cannot name anyone else.
+    const next = parsed.data.channels.map((c) => ({
+      id: crypto.randomUUID(),
+      type: c.type,
+      target: c.target.trim(),
+      enabled: c.enabled,
+    }));
+    channelsByUser.set(user.id, next);
+    return reply(200, next);
+  }
+  if (p === '/notification-channels/test' && method === 'POST') {
+    const denied = need('channels.manage_own');
+    if (denied) return denied;
+    const req = NotificationTestRequestSchema.safeParse(body);
+    if (!req.success || !user.consumerId)
+      return fail(400, 'validation_failed', 'The request is invalid');
+    const channel = (channelsByUser.get(user.id) ?? defaultChannels(user)).find(
+      (c) => c.type === req.data.type,
+    );
+    if (!channel) return fail(404, 'not_found', 'Not found');
+    // Same rule as the sample delivery service: an address containing "fail" always fails.
+    const failed = channel.target.toLowerCase().includes('fail');
+    const at = new Date().toISOString();
+    logFor(user.consumerId).unshift({
+      id: crypto.randomUUID(),
+      alertId: null,
+      kind: 'test',
+      channel: channel.type,
+      status: failed ? 'failed' : 'sent',
+      attempt: 1,
+      error: failed ? 'mock_delivery_failed' : null,
+      at,
+    });
+    return reply(200, {
+      channel: channel.type,
+      status: failed ? 'failed' : 'sent',
+      error: failed ? 'mock_delivery_failed' : null,
+      at,
+    });
+  }
+  if (p === '/notification-log' && method === 'GET') {
+    const denied = need('notifications.view_log');
+    if (denied) return denied;
+    if (!user.consumerId) return fail(403, 'forbidden', 'No fleet');
+    const page = intParam(url, 'page', 1, 1, 100_000);
+    const size = intParam(url, 'pageSize', 25, 1, 100);
+    if (page === null || size === null || url.searchParams.has('sort'))
+      return fail(400, 'validation_failed', 'The request is invalid');
+    return reply(200, paged(logFor(user.consumerId), page, size));
+  }
+  if (p === '/admin/permissions' && method === 'GET') {
+    return (
+      need('permissions.manage') ??
+      reply(200, {
+        policy: { version: policyState.version, roles: policyState.roles },
+        asOf: new Date().toISOString(),
+      })
+    );
+  }
+  if (p === '/admin/permissions' && method === 'PUT') {
+    const denied = need('permissions.manage');
+    if (denied) return denied;
+    const parsed = RolePolicyUpdateSchema.safeParse(body);
+    if (!parsed.success) return fail(400, 'validation_failed', 'The request is invalid');
+    policyState = {
+      version: policyState.version + 1,
+      roles: structuredClone(parsed.data.roles) as Record<string, string[]>,
+    };
+    return reply(200, {
+      policy: { version: policyState.version, roles: policyState.roles },
+      asOf: new Date().toISOString(),
+    });
   }
 
   const ack = method === 'POST' ? /^\/alerts\/([^/]+)\/acknowledge$/.exec(p) : null;
