@@ -1,6 +1,10 @@
-# 82V QualityLoop · Fleet Health (SCR-04)
+# 82V QualityLoop · BPTE (battery passport, BMS tracking, dashboard)
 
-Mock-first build of the consumer fleet health portal. Read these before any non-trivial change:
+**Direction (Nov 23, 2026):** this repo is being changed from the consumer fleet health portal (SCR-04) into the manufacturer-side platform described in `bpte/CLAUDE.md`: birth data, BMS field data, a dashboard for the battery manager, on medallion data layers. Existing code is the starting point; change it, don't restart. Read `bpte/CLAUDE.md` for the product and data rules.
+
+The SCR-04 documents below are the **old** plan. Where they conflict with `bpte/CLAUDE.md`, `bpte/CLAUDE.md` wins. The non-negotiables below still apply unless marked.
+
+Read these before any non-trivial change:
 
 1. `docs/architecture-plan.md`: the agreed plan (Nov 13, 2026).
 2. `docs/plan-amendments.md`: **binding fixes from the audit. Where they conflict with the plan, the amendments win.**
@@ -31,10 +35,10 @@ Mock-first build of the consumer fleet health portal. Read these before any non-
 
 These are checked by hooks and reviewers. Breaking one is a blocker, not a style issue.
 
-1. **The consumer comes from the verified token only.** It never comes from a URL, query or body, except in the documented mock-only exceptions in amendment D-04.
+1. **The tenant comes from the verified token only.** (Written as "consumer" in the old docs; the tenant is now the manufacturer. The data-model step renames it.) It never comes from a URL, query or body, except in the documented mock-only exceptions in amendment D-04.
 2. **Every tenant query runs inside `withTenant(consumerId, fn)`.** It opens a transaction and calls `set_config('app.consumer_id', $1, true)`. Never use plain `SET`, and never query tenant tables outside it.
 3. **RLS is never weakened.** No `BYPASSRLS`, no `DISABLE ROW LEVEL SECURITY`, no `NO FORCE`. The app connects as `ql_app`, which owns nothing.
-4. **Internal quality data never enters this portal.** No supplier, cohort, cell lot or cell-level columns, fields or strings in `db/`, `packages/contracts` or API responses.
+4. **Retired for the manufacturer view.** Supplier, lot and cell data are now allowed there. Any later consumer-facing view must not expose them; add a check for that view when it is built.
 5. **Data boundary.** Only `apps/api/src/data/**` may import `pg`, `kysely` or a vendor SDK. ESLint `no-restricted-imports` enforces it.
 6. **Responses are whitelisted DTOs** built from contracts schemas (`schema.parse` on the way out). Never spread a database row into a response.
 7. **Another consumer's resource returns 404, not 403.** A missing permission returns 403.
@@ -53,9 +57,9 @@ These are checked by hooks and reviewers. Breaking one is a blocker, not a style
 
 ## Working rules for Claude
 
-- Work one build step at a time with `/build-step N`. Don't start work from a later step early.
+- For BPTE work, use `/docs-first` then `/redesign`. `/build-step N` is for the old SCR-04 steps only.
 - Never run `git push`, never merge, and never edit `.env` files. `.env.example` is fine.
-- If the plan or amendments are ambiguous, choose the option that is safer for tenant isolation. Record it under "Decisions taken" in `docs/build-steps.md` and continue.
+- If the plan or amendments are ambiguous, choose the option that is safer for tenant isolation. Record it under "Decisions taken" in `bpte/STATUS.md` and continue.
 - Keep `docs/build-steps.md` current: tick acceptance checks only after running them.
 
 ## Token use
@@ -69,3 +73,11 @@ These are checked by hooks and reviewers. Breaking one is a blocker, not a style
 ## Compact instructions
 
 When compacting, keep: the current step number and status, the acceptance checks still open, the D-nn amendments in play, the files changed in this step, and any failing test names with their errors. Drop file contents that are already committed, and passing test output.
+
+## BPTE changes (in progress)
+
+- Direction and rules: `bpte/CLAUDE.md`. Design outputs (plan, status, data model, new docs) go in `bpte/`. Code goes in the real repo: `apps/api`, `apps/web`, `packages/contracts`, `db/`, and a new `apps/pipelines` for bronze, silver and gold.
+- BPTE agents (`data-model-agent`, `docs-agent`, `pipeline-agent`, `api-agent`, `dashboard-agent`, `test-data-agent`, `pipeline-test-agent`, `tenant-test-agent`, `e2e-test-agent`, `review-agent`) have models set in their frontmatter. They extend existing code and run `pnpm verify`.
+- Commands: `/docs-first` (data model, docs, review; start here) and `/redesign` (full run, stops after the plan for approval).
+- The SCR-04 `/build-step` flow and `docs/build-steps.md` describe the old build. Leave them as history; don't continue them.
+- Known to change: the guard hook's supplier rule is retired; the supplier canary in `apps/api/src/modules/fleet/endpoints.int.test.ts` and any D-12 checks that forbid supplier or lot data will fail by design when manufacturer data arrives. The data-model step lists which to retire.

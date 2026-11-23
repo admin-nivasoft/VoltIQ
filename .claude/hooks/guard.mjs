@@ -59,11 +59,10 @@ if (/\bSET\s+(SESSION\s+)?app\.consumer_id\b/i.test(texts) || /set_config\(\s*'a
   block("set app.consumer_id only with set_config('app.consumer_id', $1, true) inside withTenant (D-02).");
 }
 
-// 4. No internal quality data in the schema, seed or contracts (test files may hold canary checks)
+// 4. (Retired for BPTE.) The old rule blocked supplier, cohort and cell-lot data in db/ and contracts,
+// because SCR-04 was a consumer portal. The manufacturer view needs that data. When a consumer-facing
+// view is built (later), add a check scoped to that view's contracts instead.
 const isTest = /(^|\/)(test|tests|__tests__)\/|\.(test|spec)\.[cm]?[jt]sx?$/.test(rel);
-if (!isTest && /^(db\/|packages\/contracts\/)/.test(rel) && /(^|[^a-z])(supplier|cohort|cell_?lot)/i.test(texts)) {
-  block('supplier, cohort and cell-lot data must never enter the consumer portal (SCR-04-FR-04, CLAUDE.md non-negotiable 4).');
-}
 
 // 5. Data boundary: DB clients only under apps/api/src/data
 if (/^apps\/(api|web)\/src\//.test(rel) && !/^apps\/api\/src\/data\//.test(rel) && !isTest &&
