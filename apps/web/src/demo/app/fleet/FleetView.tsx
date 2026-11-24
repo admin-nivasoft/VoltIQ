@@ -409,7 +409,7 @@ function HealthAndCycles({ o }: { o: FleetOverview }) {
 function Coverage({ o }: { o: FleetOverview }) {
   const notReporting = o.registered.value - o.reporting.value;
   return (
-    <section aria-labelledby="coverage" className="scroll-mt-16">
+    <section aria-labelledby="coverage" className="min-w-0 scroll-mt-16">
       <SectionHeading id="coverage" title="Data received" updated={{ at: o.updated.bms, prefix: 'Battery data received' }} />
       <Tile>
         <div className="flex items-start justify-between gap-2">
@@ -421,7 +421,8 @@ function Coverage({ o }: { o: FleetOverview }) {
           last {o.settings.coveragePeriodDays} days (example settings)
         </p>
         {o.gaps.batteries.length ? (
-          <Table className="mt-3">
+          <div tabIndex={0} role="region" aria-label="Batteries missing data, scrollable" className="mt-3 overflow-x-auto">
+          <Table>
             <caption className="sr-only">Batteries missing data</caption>
             <TableHeader className="static">
               <tr>
@@ -444,6 +445,7 @@ function Coverage({ o }: { o: FleetOverview }) {
               ))}
             </TableBody>
           </Table>
+          </div>
         ) : (
           <p className="mt-3">Every deployed battery sent its expected data.</p>
         )}
@@ -463,7 +465,7 @@ function Coverage({ o }: { o: FleetOverview }) {
 
 function DataQuality({ o }: { o: FleetOverview }) {
   return (
-    <section aria-labelledby="data-quality" className="scroll-mt-16">
+    <section aria-labelledby="data-quality" className="min-w-0 scroll-mt-16">
       <SectionHeading id="data-quality" title="Data quality" updated={{ at: o.updated.registry, prefix: 'Factory data imported' }} />
       <div className="space-y-4">
         <Tile>

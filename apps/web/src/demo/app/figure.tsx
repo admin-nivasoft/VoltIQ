@@ -101,6 +101,8 @@ function WorkingBody({ def, basis }: { def: MetricDefinition; basis?: Basis }) {
           <p className="mt-3 text-xs leading-4 text-cds-text-helper">
             {calculated ? 'Worked out' : 'Received'} {dateTime(basis.calculatedAt)}
           </p>
+          {/* The dictionary key, so any figure can be traced to bpte/data-model/metrics.md. */}
+          <p className="mt-1 break-all text-xs leading-4 text-cds-text-helper">Reference: {def.metricId}</p>
         </>
       ) : null}
     </div>
