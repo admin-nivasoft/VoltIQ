@@ -1,7 +1,9 @@
 // The BPTE client-layer mockup: the manufacturer's own view, on sample data. Loaded only when the app
 // is built with VITE_DEMO=true (see App.tsx), so none of it reaches a normal bundle.
-import { Construction } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
+import { BatteryView } from './battery/BatteryView';
+import { ConnectionView } from './connection/ConnectionView';
+import { ImportsView } from './imports/ImportsView';
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { InlineNotification } from '../../components/ui/inline-notification';
@@ -48,25 +50,6 @@ function SessionGate({ signedOut }: { signedOut: 'redirect' | 'render' }) {
   return <Shell me={s.me} />;
 }
 
-/** Screens built after the Fleet view is agreed. Each still has a way back. */
-function NotYetBuilt({ title }: { title: string }) {
-  usePageTitle(title);
-  return (
-    <div className="mx-auto max-w-[1312px] px-4 pt-6 lg:px-8">
-      <h1 className="text-[28px] leading-9">{title}</h1>
-      <InlineNotification kind="info" title="Not in this preview yet" className="mt-6">
-        <p className="flex items-center gap-2">
-          <Construction aria-hidden="true" className="h-4 w-4" />
-          This screen is built after the Fleet view design is agreed.
-        </p>
-      </InlineNotification>
-      <Link to="/" className="mt-6 inline-block text-cds-interactive hover:underline">
-        Back to the fleet overview
-      </Link>
-    </div>
-  );
-}
-
 function NotFound() {
   usePageTitle('Page not found');
   return (
@@ -91,9 +74,9 @@ export default function DemoApp() {
       <Route path="/login" element={<SessionGate signedOut="render" />} />
       <Route element={<SessionGate signedOut="redirect" />}>
         <Route index element={<FleetView />} />
-        <Route path="batteries/:batteryId" element={<NotYetBuilt title="Battery" />} />
-        <Route path="imports" element={<NotYetBuilt title="Birth data import" />} />
-        <Route path="connection" element={<NotYetBuilt title="BMS connection" />} />
+        <Route path="batteries/:batteryId" element={<BatteryView />} />
+        <Route path="imports" element={<ImportsView />} />
+        <Route path="connection" element={<ConnectionView />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

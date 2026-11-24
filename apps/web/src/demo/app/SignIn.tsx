@@ -7,8 +7,8 @@ import { ROLE_LABEL } from '../roles';
 import { useSignIn } from './session';
 
 const ROLE_HINT = {
-  battery_manager: 'Watches the fleet: health, warnings and data coverage.',
-  admin: 'Everything the battery manager sees, plus importing birth data and managing the BMS connection.',
+  battery_manager: 'Watches the fleet: health, warnings and data received.',
+  admin: 'Everything the battery manager sees, plus importing factory data and managing the data connection.',
 } as const;
 
 /** The demo sign-in: pick a role at the one fictional manufacturer shown in the picker. */

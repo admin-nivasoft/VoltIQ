@@ -36,7 +36,7 @@ The Battery manager's home screen. Users: Battery manager, Admin.
 | ID | Requirement | Acceptance criteria | Source | Priority | Phase |
 | --- | --- | --- | --- | --- | --- |
 | SCR-01-FR-01 | Period selector filters every tile, list and chart | Options proposed, to confirm: last 90 days, last 12 months, all time; all panels refresh together | - | Must | P2 |
-| SCR-01-FR-02 | Headline tiles: batteries in the field, fleet average SoH, batteries with open warnings, batteries with no recent data | Each value matches the records; each tile shows its source label and freshness; tile opens the related list pre-filtered | Field count Reg; SoH BMS or Calc per battery; warnings Calc; last data Calc | Must | P2 |
+| SCR-01-FR-02 | Headline tiles: batteries in the field, fleet average Health (reported by BMS), batteries with open warnings, batteries with no recent data | Each value matches the records; each tile shows its source label and freshness; tile opens the related list pre-filtered | Field count Reg; Health BMS (`soh_reported_pct`); warnings Calc; last data Calc | Must | P2 |
 | SCR-01-FR-03 | Cohort alert list | Later | - | Later | Later |
 | SCR-01-FR-04 | Investigate opens SCR-02 | Later | - | Later | Later |
 | SCR-01-FR-05 | Fleet SoH by build month chart (build-month grouping is a cohort view) | Later | - | Later | Later |
@@ -59,8 +59,8 @@ One battery's story: how it was built and how it is behaving. Users: Battery man
 | SCR-03-FR-02 | Header: battery ID, spec, holder and site, active warning badges | Badges name the warning in text (for example "Warning: high temperature"); badges appear in P2 | Reg, Calc | Must | P1 |
 | SCR-03-FR-03 | Birth record: build date, line, shift, cell supplier, cell lot, grade spread, EOL result and date, BMS firmware | Missing data shows "not recorded"; each field labelled Reg | Reg | Must | P1 |
 | SCR-03-FR-04 | View all cell records: per cell serial, lot, OCV, IR, capacity, grade, slot | Table of every cell; exportable | Reg | Must | P1 |
-| SCR-03-FR-05 | Field health tiles: SoH, cycles, maximum temperature in last 30 days, last data received | Each tile shows BMS or Calc and freshness; Calc tiles show method and version; remaining life with confidence range is Later | BMS or Calc | Must | P2 |
-| SCR-03-FR-06 | SoH trend chart for this battery | Selectable range; warning events marked. Comparison to cohort and fleet is Later (M3) | BMS or Calc | Should | P2 |
+| SCR-03-FR-05 | Field health tiles: Health (reported by BMS), Cycles (reported by BMS), maximum temperature in last 30 days, last data received | Each tile shows its source label and freshness; calculated `soh_pct` and `cycle_count` are not computed in the first release (Later, method `[__]`); remaining life with confidence range is Later | Health BMS (`soh_reported_pct`); Cycles BMS (`cycle_count_reported`); others per tile | Must | P2 |
+| SCR-03-FR-06 | Health (reported by BMS) trend chart for this battery | Selectable range; warning events marked. Comparison to cohort and fleet is Later (M3) | BMS (`soh_reported_pct`) | Should | P2 |
 | SCR-03-FR-07 | Cell voltage grid per module, outlier cells highlighted | Outlier rule configurable (default: deviation from module median beyond [__ mV]); highlight uses text and border, not colour alone | Calc | Must | P2 |
 | SCR-03-FR-08 | Warning explanation in plain words: which rule, the value, and since when | Generated from the rule result; states the signal and trend | Calc | Should | P2 |
 | SCR-03-FR-09 | Add to investigation (8D) | Later | - | Later | Later |
@@ -111,8 +111,8 @@ Users: Admin.
 
 | ID | Requirement | Acceptance criteria | Priority | Phase |
 | --- | --- | --- | --- | --- |
-| PLT-AN-01 | SoH per battery: BMS value if sent, else calculated | Method `[__]`; validated against [__] reference capacity tests; error within [±__%]. Per-cell SoH is Later `[__]` | Must | P2 |
-| PLT-AN-02 | Rule-based warnings: high temperature, cell imbalance, low or falling SoH, repeated faults, no data | Each warning states its rule and value; thresholds `[__]`. ML detection (drift, rising IR) is Later | Must | P2 |
+| PLT-AN-01 | Health per battery: "Health (reported by BMS)" (`soh_reported_pct`, source BMS, silver). Calculated `soh_pct` (source Calc, gold) is Later; not computed in the first release. If the BMS sends no value, health shows "not recorded" | Calculated method `[__]`; validated against [__] reference capacity tests; error within [±__%]. Per-cell SoH is Later `[__]` | Must | P2 |
+| PLT-AN-02 | Rule-based warnings: high temperature, cell imbalance, low or falling health (soh_low rule uses `soh_reported_pct` in the first release), repeated faults, no data | Each warning states its rule and value; thresholds `[__]`. ML detection (drift, rising IR) is Later | Must | P2 |
 | PLT-AN-03 | Remaining useful life with a confidence range | Later | Later | Later |
 | PLT-AN-04 | Cohort comparison engine | Later | Later | Later |
 | PLT-AN-05 | Factory-to-field correlation | Later | Later | Later |

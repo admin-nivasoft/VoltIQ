@@ -9,13 +9,13 @@ import { useMetrics } from './session';
 
 const SOURCE: Record<Source, { label: string; icon: typeof Cpu }> = {
   bms: { label: 'From BMS', icon: Cpu },
-  calculated: { label: 'Calculated', icon: Calculator },
-  registered: { label: 'Registered', icon: FileText },
+  calculated: { label: 'Worked out by us', icon: Calculator },
+  registered: { label: 'From factory or admin records', icon: FileText },
 };
 const INPUT_FROM = {
-  bms: 'BMS data',
-  calculated: 'Calculated',
-  registered: 'Registered',
+  bms: 'Reported by BMS',
+  calculated: 'Worked out by us',
+  registered: 'From factory or admin records',
   setting: 'Example setting',
 } as const;
 
@@ -34,8 +34,8 @@ export function SourceTag({ source, className }: { source: Source; className?: s
 /** "Updated 11 min ago", with the exact time on hover and for screen readers. */
 export function Updated({ at, prefix = 'Updated' }: { at: string; prefix?: string }) {
   return (
-    <span className="inline-flex items-center gap-1 text-xs leading-4 tracking-[0.32px] text-cds-text-helper">
-      <Clock aria-hidden="true" className="h-3.5 w-3.5" />
+    <span className="inline-flex max-w-full items-center gap-1 text-xs leading-4 tracking-[0.32px] text-cds-text-helper">
+      <Clock aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
       <time dateTime={at} title={dateTime(at)}>
         {prefix} {ago(at)}
       </time>
@@ -63,14 +63,13 @@ function WorkingBody({ def, basis }: { def: MetricDefinition; basis?: Basis }) {
     <div className="text-sm leading-[18px]">
       <p className="font-semibold">{def.label}</p>
       <p className="mt-0.5 text-xs leading-4 text-cds-text-secondary">
-        {SOURCE[def.source].label} · metric <code className="font-plex">{def.metricId}</code> · version{' '}
-        {def.version} ({def.status})
+        {SOURCE[def.source].label} · version {def.version} ({def.status})
       </p>
-      <Section title={calculated ? 'How it is worked out' : 'Where it comes from'}>
+      <Section title={calculated ? 'How this is worked out' : 'Where this comes from'}>
         <p>{def.words}</p>
         <p className="tnum mt-2 bg-cds-layer px-2 py-1.5 text-[13px]">{def.symbols}</p>
       </Section>
-      <Section title="Inputs">
+      <Section title="What it uses">
         <ul className="space-y-1">
           {def.inputs.map((i) => (
             <li key={i.name} className="flex flex-wrap items-baseline justify-between gap-x-2">
@@ -96,15 +95,52 @@ function WorkingBody({ def, basis }: { def: MetricDefinition; basis?: Basis }) {
                 ))}
               </ul>
             ) : (
-              <p>Nothing reduces confidence in this figure at the moment.</p>
+              <p>Nothing is lowering our confidence in this number right now.</p>
             )}
           </Section>
           <p className="mt-3 text-xs leading-4 text-cds-text-helper">
-            {calculated ? 'Calculated' : 'Read'} {dateTime(basis.calculatedAt)}
+            {calculated ? 'Worked out' : 'Received'} {dateTime(basis.calculatedAt)}
           </p>
         </>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * For values that are not calculated and have no metric of their own (a birth record field, a raw
+ * BMS reading): says where the value came from and when, in the same toggletip as Working.
+ */
+export function SourceInfo({
+  name,
+  source,
+  from,
+  at,
+  className,
+}: {
+  /** What the value is called on screen, for the button's accessible name. */
+  name: string;
+  source: Exclude<Source, 'calculated'>;
+  /** Plain words, e.g. "The factory record, file birth_2026-11.csv" or "Cell voltage readings from the BMS". */
+  from: string;
+  at: string | null;
+  className?: string;
+}) {
+  return (
+    <span className={cn('inline-flex', className)}>
+      <Toggletip label={`Where ${name} comes from`} trigger={<Info aria-hidden="true" className="h-4 w-4" />}>
+        <div className="text-sm leading-[18px]">
+          <p className="font-semibold">{name}</p>
+          <p className="mt-0.5 text-xs leading-4 text-cds-text-secondary">{SOURCE[source].label} · not calculated</p>
+          <Section title="Where it comes from">
+            <p>{from}</p>
+          </Section>
+          <p className="mt-3 text-xs leading-4 text-cds-text-helper">
+            {at ? `${source === 'bms' ? 'Received' : 'Recorded'} ${dateTime(at)}` : 'Time not known'}
+          </p>
+        </div>
+      </Toggletip>
+    </span>
   );
 }
 
@@ -133,9 +169,9 @@ export function Working({
         {def ? (
           <WorkingBody def={def} basis={basis} />
         ) : metrics.isError ? (
-          <p>The metric dictionary could not be loaded. Reload the page to try again.</p>
+          <p>We could not load this explanation. Reload the page to try again.</p>
         ) : (
-          <p>Loading the definition…</p>
+          <p>Loading the explanation…</p>
         )}
       </Toggletip>
     </span>

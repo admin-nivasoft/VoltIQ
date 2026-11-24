@@ -82,7 +82,7 @@ function Attention({ o }: { o: FleetOverview }) {
       key: 'gaps',
       icon: <RadioTower aria-hidden="true" className="text-cds-text-primary" />,
       count: o.gaps.value,
-      text: o.gaps.value === 1 ? 'battery with data gaps' : 'batteries with data gaps',
+      text: o.gaps.value === 1 ? 'battery missing data' : 'batteries missing data',
       detail: `Last ${o.settings.coveragePeriodDays} days`,
       href: '#coverage',
     });
@@ -91,8 +91,8 @@ function Attention({ o }: { o: FleetOverview }) {
       key: 'unmatched',
       icon: <Unlink aria-hidden="true" className="text-cds-text-primary" />,
       count: o.unmatched.value,
-      text: o.unmatched.value === 1 ? 'BMS ID matches no battery' : 'BMS IDs match no battery',
-      detail: 'Data held until linked',
+      text: o.unmatched.value === 1 ? 'battery ID is not recognised' : 'battery IDs are not recognised',
+      detail: 'Data kept until linked',
       href: '#data-quality',
     });
   if (o.noBirthRecord.value)
@@ -100,7 +100,7 @@ function Attention({ o }: { o: FleetOverview }) {
       key: 'birth',
       icon: <FileWarning aria-hidden="true" className="text-cds-text-primary" />,
       count: o.noBirthRecord.value,
-      text: o.noBirthRecord.value === 1 ? 'battery without birth record' : 'batteries without birth record',
+      text: o.noBirthRecord.value === 1 ? 'battery without factory record' : 'batteries without factory record',
       detail: 'Entered by an Admin',
       href: '#data-quality',
     });
@@ -181,11 +181,11 @@ function KeyFigures({ o }: { o: FleetOverview }) {
       </h2>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KeyFigure
-          label="Batteries registered"
+          label="Batteries on record"
           metricId="batteries_registered"
           basis={o.registered.basis}
           value={num(o.registered.value)}
-          sub={`${num(o.registered.value - o.noBirthRecord.value)} from birth records · ${num(o.noBirthRecord.value)} entered by Admin`}
+          sub={`${num(o.registered.value - o.noBirthRecord.value)} from factory records · ${num(o.noBirthRecord.value)} entered by Admin`}
         />
         <KeyFigure
           label="Reporting now"
@@ -215,11 +215,11 @@ function KeyFigures({ o }: { o: FleetOverview }) {
           }
         />
         <KeyFigure
-          label="Fleet data coverage"
+          label="Fleet data received"
           metricId="fleet_data_coverage_pct"
           basis={o.coverage.basis}
           value={o.coverage.pct === null ? <NotRecorded /> : `${num(o.coverage.pct, 1)}%`}
-          sub={`Of expected BMS messages, last ${o.settings.coveragePeriodDays} days`}
+          sub={`Of expected messages, last ${o.settings.coveragePeriodDays} days`}
         />
       </div>
     </section>
@@ -379,7 +379,7 @@ function HealthAndCycles({ o }: { o: FleetOverview }) {
   return (
     <section aria-labelledby="health" className="mb-8 scroll-mt-16">
       <SectionHeading id="health" title="Health and cycles across the fleet">
-        What each battery’s BMS reports. We do not calculate health or cycles yet.
+        What each battery’s own system (BMS) reports. We do not work out health or cycles ourselves.
       </SectionHeading>
       <div className="grid gap-4 lg:grid-cols-2">
         <DistributionTile
@@ -387,7 +387,7 @@ function HealthAndCycles({ o }: { o: FleetOverview }) {
           metricId="fleet_soh_reported_distribution"
           dist={o.health}
           unit="%"
-          xTitle="Health reported by BMS (%)"
+          xTitle="Health (reported by BMS) (%)"
           decimals={1}
           reference={soh ? { value: 80, label: 'Warning below 80% (example rule)' } : undefined}
         />
@@ -396,7 +396,7 @@ function HealthAndCycles({ o }: { o: FleetOverview }) {
           metricId="fleet_cycle_count_distribution"
           dist={o.cycles}
           unit=""
-          xTitle="Cycles reported by BMS"
+          xTitle="Cycles (reported by BMS)"
           decimals={0}
         />
       </div>
@@ -410,24 +410,24 @@ function Coverage({ o }: { o: FleetOverview }) {
   const notReporting = o.registered.value - o.reporting.value;
   return (
     <section aria-labelledby="coverage" className="scroll-mt-16">
-      <SectionHeading id="coverage" title="Data coverage" updated={{ at: o.updated.bms, prefix: 'BMS data received' }} />
+      <SectionHeading id="coverage" title="Data received" updated={{ at: o.updated.bms, prefix: 'Battery data received' }} />
       <Tile>
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold">Batteries with data gaps</h3>
-          <Working metricId="batteries_with_gaps" basis={o.gaps.basis} name="Batteries with data gaps" className="-mr-1" />
+          <h3 className="font-semibold">Batteries missing data</h3>
+          <Working metricId="batteries_with_gaps" basis={o.gaps.basis} name="Batteries missing data" className="-mr-1" />
         </div>
         <p className="mt-1 text-xs leading-4 text-cds-text-secondary">
-          Coverage below {o.settings.gapCoverageBelowPct}% or a silence longer than {o.settings.gapLongerThanHours} hours,
+          Data received below {o.settings.gapCoverageBelowPct}% or no data for more than {o.settings.gapLongerThanHours} hours,
           last {o.settings.coveragePeriodDays} days (example settings)
         </p>
         {o.gaps.batteries.length ? (
           <Table className="mt-3">
-            <caption className="sr-only">Batteries with data gaps</caption>
+            <caption className="sr-only">Batteries missing data</caption>
             <TableHeader className="static">
               <tr>
                 <TableHead>Battery</TableHead>
-                <TableHead numeric>Coverage (%)</TableHead>
-                <TableHead numeric>Longest gap (h)</TableHead>
+                <TableHead numeric className="whitespace-normal">Data received (%)</TableHead>
+                <TableHead numeric className="whitespace-normal">Longest time with no data (hours)</TableHead>
                 <TableHead className="hidden sm:table-cell">Last data</TableHead>
               </tr>
             </TableHeader>
@@ -464,23 +464,23 @@ function Coverage({ o }: { o: FleetOverview }) {
 function DataQuality({ o }: { o: FleetOverview }) {
   return (
     <section aria-labelledby="data-quality" className="scroll-mt-16">
-      <SectionHeading id="data-quality" title="Data quality" updated={{ at: o.updated.registry, prefix: 'Birth data imported' }} />
+      <SectionHeading id="data-quality" title="Data quality" updated={{ at: o.updated.registry, prefix: 'Factory data imported' }} />
       <div className="space-y-4">
         <Tile>
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold">BMS IDs that match no battery</h3>
-            <Working metricId="unmatched_id_count" basis={o.unmatched.basis} name="Unmatched IDs" className="-mr-1" />
+            <h3 className="font-semibold">Unrecognised battery IDs</h3>
+            <Working metricId="unmatched_id_count" basis={o.unmatched.basis} name="Unrecognised battery IDs" className="-mr-1" />
           </div>
           <p className="mt-1 text-xs leading-4 text-cds-text-secondary">
-            Their data is held, not dropped, until an Admin links the ID or a birth record arrives.
+            We keep their data. An Admin can link each ID, or a factory record can arrive.
           </p>
           {o.unmatched.ids.length ? (
             <Table className="mt-3">
-              <caption className="sr-only">Unmatched BMS IDs</caption>
+              <caption className="sr-only">Unrecognised battery IDs</caption>
               <TableHeader className="static">
                 <tr>
-                  <TableHead>BMS ID</TableHead>
-                  <TableHead numeric>Messages held</TableHead>
+                  <TableHead>Battery ID</TableHead>
+                  <TableHead numeric>Messages waiting</TableHead>
                   <TableHead>First seen</TableHead>
                 </tr>
               </TableHeader>
@@ -497,12 +497,12 @@ function DataQuality({ o }: { o: FleetOverview }) {
               </TableBody>
             </Table>
           ) : (
-            <p className="mt-3">Every BMS ID that sent data matches a battery.</p>
+            <p className="mt-3">Every battery ID that sent data is recognised.</p>
           )}
         </Tile>
         <Tile>
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold">Batteries without a birth record</h3>
+            <h3 className="font-semibold">Batteries without a factory record</h3>
             <Working metricId="batteries_no_birth_record" basis={o.noBirthRecord.basis} name="Batteries without birth record" className="-mr-1" />
           </div>
           <p className="mt-1 text-xs leading-4 text-cds-text-secondary">
@@ -544,12 +544,12 @@ function ExampleSettings({ o }: { o: FleetOverview }) {
         <dl className="tnum mt-3 grid gap-x-8 gap-y-2 sm:grid-cols-2">
           {[
             ['Reporting window', `${s.reportingWindowHours} hours`],
-            ['Expected BMS send rate', `One message every ${s.sendIntervalMinutes} minutes`],
-            ['Coverage period', `${s.coveragePeriodDays} days`],
-            ['Data gap', `Coverage below ${s.gapCoverageBelowPct}% or a silence longer than ${s.gapLongerThanHours} hours`],
+            ['Expected messages from BMS', `One message every ${s.sendIntervalMinutes} minutes`],
+            ['Period for data received', `${s.coveragePeriodDays} days`],
+            ['Missing data', `Data received below ${s.gapCoverageBelowPct}% or no data for more than ${s.gapLongerThanHours} hours`],
             ['Health chart bands', `${s.healthBandPct} percentage points`],
             ['Cycles chart bands', `${s.cycleBand} cycles`],
-            ...s.rules.map((r) => [`Warning rule: ${r.ruleId}`, `${r.condition} → ${r.severity[0]!.toUpperCase()}${r.severity.slice(1)}`]),
+            ...s.rules.map((r) => [`Warning rule ${r.ruleId}`, `${r.condition} → ${r.severity[0]!.toUpperCase()}${r.severity.slice(1)}`]),
           ].map(([k, v]) => (
             <div key={k} className="flex flex-col">
               <dt className="text-xs leading-4 text-cds-text-secondary">{k}</dt>
@@ -596,8 +596,8 @@ export function FleetView() {
         {o ? (
           <div className="flex flex-col items-start gap-0.5 sm:items-end">
             <Updated at={o.updated.bms} prefix="BMS data received" />
-            <Updated at={o.updated.calculations} prefix="Calculations run" />
-            <Updated at={o.updated.registry} prefix="Birth data imported" />
+            <Updated at={o.updated.calculations} prefix="Figures updated" />
+            <Updated at={o.updated.registry} prefix="Factory data imported" />
           </div>
         ) : null}
       </div>
@@ -624,7 +624,7 @@ export function FleetView() {
           </div>
           <section aria-labelledby="batteries" className="scroll-mt-16">
             <SectionHeading id="batteries" title="All batteries" updated={{ at: o.updated.calculations, prefix: 'Updated' }}>
-              Sorted by open warnings. Select a battery to see its passport and field data.
+              Sorted by open warnings. Select a battery to see its details and live data.
             </SectionHeading>
             <BatteryTable settings={o.settings} />
           </section>

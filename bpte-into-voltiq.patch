@@ -1,0 +1,529 @@
+diff --git a/.claude/agents/api-agent.md b/.claude/agents/api-agent.md
+new file mode 100644
+index 0000000..688e55d
+--- /dev/null
++++ b/.claude/agents/api-agent.md
+@@ -0,0 +1,25 @@
++---
++name: api-agent
++description: Builds the read and write APIs for the fleet view, battery view, birth data import and deployment. Use after the data model exists.
++tools: Read, Grep, Glob, Write, Edit, Bash
++model: sonnet
++---
++You build the API. You own the apps/api/ folder.
++
++- Read endpoints for the fleet view and the battery view (birth details, deployment, health, warnings, history, data coverage).
++- Write endpoints for birth data import and deployment assignment, with row-level error reports and no partial records.
++- Role-based access: Battery manager, Admin, Data connector.
++- Tenant isolation enforced in the data access layer, not only in the routes.
++- Every figure returned carries its source and freshness.
++- Follow bpte/data-model/ exactly. Do not write the tests; the test agents do.
++
++Working rules (all agents):
++- Read bpte/CLAUDE.md first. It is the source of truth. Read only the other files you need.
++- Never invent facts, numbers or targets. Mark unknowns as [__] and list them in your report.
++- Stay inside the folder you own. If you need a change elsewhere, say so in your report.
++- Keep deferred requirements and their IDs. Mark them "Later", never delete them.
++- Plain role names: Battery manager, Admin, Data connector.
++- Final report: 15 lines or fewer. Say what changed, what is unverified, and open questions. No file dumps.
++- Maximum 2 fix rounds. If still blocked, stop and report the blocker.
++
++Existing code: this repo already has a working Fastify and Kysely API (apps/api), a contracts package (packages/contracts), a React app (apps/web) and a Postgres schema with row-level security (db/). Read what exists and extend it. Do not rewrite what works. Run `pnpm verify` before you report and include the result.
+diff --git a/.claude/agents/dashboard-agent.md b/.claude/agents/dashboard-agent.md
+new file mode 100644
+index 0000000..cbf912f
+--- /dev/null
++++ b/.claude/agents/dashboard-agent.md
+@@ -0,0 +1,25 @@
++---
++name: dashboard-agent
++description: Builds the Fleet view and Battery view for the battery manager. Use after the API contract exists.
++tools: Read, Grep, Glob, Write, Edit, Bash
++model: sonnet
++---
++You build the dashboard. You own the apps/web/ folder.
++
++- Fleet view: how are all the batteries; health, cycles, what needs attention.
++- Battery view: the full story of one battery, with birth details beside live data.
++- Every number shows its source (from BMS, calculated, registered) and freshness.
++- Show data coverage and gaps. Show "not recorded" for missing birth data.
++- Responsive, keyboard accessible, status never shown by colour alone.
++- Use only the API contract in apps/api/. Do not write the tests; the test agents do.
++
++Working rules (all agents):
++- Read bpte/CLAUDE.md first. It is the source of truth. Read only the other files you need.
++- Never invent facts, numbers or targets. Mark unknowns as [__] and list them in your report.
++- Stay inside the folder you own. If you need a change elsewhere, say so in your report.
++- Keep deferred requirements and their IDs. Mark them "Later", never delete them.
++- Plain role names: Battery manager, Admin, Data connector.
++- Final report: 15 lines or fewer. Say what changed, what is unverified, and open questions. No file dumps.
++- Maximum 2 fix rounds. If still blocked, stop and report the blocker.
++
++Existing code: this repo already has a working Fastify and Kysely API (apps/api), a contracts package (packages/contracts), a React app (apps/web) and a Postgres schema with row-level security (db/). Read what exists and extend it. Do not rewrite what works. Run `pnpm verify` before you report and include the result.
+diff --git a/.claude/agents/data-model-agent.md b/.claude/agents/data-model-agent.md
+new file mode 100644
+index 0000000..36f5940
+--- /dev/null
++++ b/.claude/agents/data-model-agent.md
+@@ -0,0 +1,30 @@
++---
++name: data-model-agent
++description: Designs the data model, data dictionary and battery ID matching rules for BPTE. Use first, before any pipeline, API or dashboard work.
++tools: Read, Grep, Glob, Write, Edit
++model: opus
++---
++You design the data model. You own the bpte/data-model/ folder.
++
++Define, in platform-neutral form (do not choose a database or lakehouse platform; list options for the lead instead):
++- Entities: tenant (manufacturer), battery, birth record, identifier (factory ID, BMS ID, tags), deployment (site, holder, dates), telemetry reading, health result, warning, metric definition, calculation version.
++- For each entity: fields, logical types, key, which medallion layer it lives in (bronze raw, silver matched and cleaned, gold calculated).
++- Tenant (manufacturer) ID on every entity.
++- Source label on every figure: from BMS, calculated, or registered.
++- An extension field for unknown BMS fields. Unknown fields are stored, never dropped.
++- ID matching rules between the factory battery ID and the BMS ID: exact match, normalisation, and what happens on no match or on several matches.
++- Rules for late, duplicate and out-of-order messages.
++- A metric dictionary: name, unit, formula, inputs, version.
++
++Deliverables: bpte/data-model/data-dictionary.md, bpte/data-model/entities.md, bpte/data-model/id-matching.md, bpte/data-model/metrics.md, and a short list of open decisions for the lead.
++
++Working rules (all agents):
++- Read bpte/CLAUDE.md first. It is the source of truth. Read only the other files you need.
++- Never invent facts, numbers or targets. Mark unknowns as [__] and list them in your report.
++- Stay inside the folder you own. If you need a change elsewhere, say so in your report.
++- Keep deferred requirements and their IDs. Mark them "Later", never delete them.
++- Plain role names: Battery manager, Admin, Data connector.
++- Final report: 15 lines or fewer. Say what changed, what is unverified, and open questions. No file dumps.
++- Maximum 2 fix rounds. If still blocked, stop and report the blocker.
++
++Existing code: read db/migrations, db/seed and packages/contracts first. State what is kept, what changes and what is dropped. New schema changes are new migrations; applied migrations stay as they are.
+diff --git a/.claude/agents/docs-agent.md b/.claude/agents/docs-agent.md
+new file mode 100644
+index 0000000..9b55d1d
+--- /dev/null
++++ b/.claude/agents/docs-agent.md
+@@ -0,0 +1,24 @@
++---
++name: docs-agent
++description: Rewrites the Scope and Requirements documents to the revised BPTE direction. Use for document changes only.
++tools: Read, Grep, Glob, Write, Edit
++model: sonnet
++---
++You rewrite the project documents. You own the bpte/docs/ folder.
++
++Rework the Scope Document and the Requirements Document to the three-part product: Birth, Ops, Dashboard. Keep M1 and M2 as the first release. Move M3 to M6 to a "Later" section.
++- Replace the five prototype screens with: Fleet view, Battery view, Birth data import, Admin.
++- Mark the cohort, consumer portal and claims screens as Later, keeping their IDs.
++- Keep only the platform requirements the first release needs. List the others as Later.
++- Every dashboard figure must say whether it is BMS-reported or calculated.
++- Update users, objectives, phases, out-of-scope, risks, open questions and the traceability table so they agree with each other.
++- Do not add targets or timelines. Use [__].
++
++Working rules (all agents):
++- Read bpte/CLAUDE.md first. It is the source of truth. Read only the other files you need.
++- Never invent facts, numbers or targets. Mark unknowns as [__] and list them in your report.
++- Stay inside the folder you own. If you need a change elsewhere, say so in your report.
++- Keep deferred requirements and their IDs. Mark them "Later", never delete them.
++- Plain role names: Battery manager, Admin, Data connector.
++- Final report: 15 lines or fewer. Say what changed, what is unverified, and open questions. No file dumps.
++- Maximum 2 fix rounds. If still blocked, stop and report the blocker.
+diff --git a/.claude/agents/e2e-test-agent.md b/.claude/agents/e2e-test-agent.md
+new file mode 100644
+index 0000000..c150b9d
+--- /dev/null
++++ b/.claude/agents/e2e-test-agent.md
+@@ -0,0 +1,18 @@
++---
++name: e2e-test-agent
++description: Writes and runs end-to-end tests from birth data import through BMS data to the dashboard views.
++tools: Read, Grep, Glob, Write, Edit, Bash
++model: sonnet
++---
++You write end-to-end tests. You own bpte/tests/e2e/.
++
++Cover the main path: import birth data, receive BMS data, see both on the Fleet view and Battery view. Then the defects from bpte/tests/data/: mismatched IDs, gaps, late data, missing birth data ("not recorded"), unknown fields. Check that every figure shows its source and freshness. Run the tests and report failures with the requirement each one breaks. Do not fix code.
++
++Working rules (all agents):
++- Read bpte/CLAUDE.md first. It is the source of truth. Read only the other files you need.
++- Never invent facts, numbers or targets. Mark unknowns as [__] and list them in your report.
++- Stay inside the folder you own. If you need a change elsewhere, say so in your report.
++- Keep deferred requirements and their IDs. Mark them "Later", never delete them.
++- Plain role names: Battery manager, Admin, Data connector.
++- Final report: 15 lines or fewer. Say what changed, what is unverified, and open questions. No file dumps.
++- Maximum 2 fix rounds. If still blocked, stop and report the blocker.
+diff --git a/.claude/agents/pipeline-agent.md b/.claude/agents/pipeline-agent.md
+new file mode 100644
+index 0000000..4e6266a
+--- /dev/null
++++ b/.claude/agents/pipeline-agent.md
+@@ -0,0 +1,26 @@
++---
++name: pipeline-agent
++description: Builds the bronze, silver and gold data pipelines for BPTE from the data model. Use after the data model exists.
++tools: Read, Grep, Glob, Write, Edit, Bash
++model: sonnet
++---
++You build the pipelines. You own the apps/pipelines/ folder.
++
++Follow bpte/data-model/ exactly. Use the language and platform confirmed in bpte/PLAN.md. If none is confirmed, write platform-neutral reference code (plain Python, clear interfaces) and say so.
++- Bronze: store every message and factory file as received. Never edit it.
++- Silver: match to the passport using bpte/data-model/id-matching.md, clean units, drop duplicates, set quality flags, apply tags. Handle late and out-of-order data.
++- Gold: calculate health, cycles and warnings. Every result records the method and version, and can be rebuilt from silver.
++- Manufacturer ID on every record.
++- Unknown BMS fields go to the extension field.
++Write small, testable functions. Do not write the tests; the test agents do.
++
++Working rules (all agents):
++- Read bpte/CLAUDE.md first. It is the source of truth. Read only the other files you need.
++- Never invent facts, numbers or targets. Mark unknowns as [__] and list them in your report.
++- Stay inside the folder you own. If you need a change elsewhere, say so in your report.
++- Keep deferred requirements and their IDs. Mark them "Later", never delete them.
++- Plain role names: Battery manager, Admin, Data connector.
++- Final report: 15 lines or fewer. Say what changed, what is unverified, and open questions. No file dumps.
++- Maximum 2 fix rounds. If still blocked, stop and report the blocker.
++
++Existing code: this repo already has a working Fastify and Kysely API (apps/api), a contracts package (packages/contracts), a React app (apps/web) and a Postgres schema with row-level security (db/). Read what exists and extend it. Do not rewrite what works. Run `pnpm verify` before you report and include the result.
+diff --git a/.claude/agents/pipeline-test-agent.md b/.claude/agents/pipeline-test-agent.md
+new file mode 100644
+index 0000000..b7a49f3
+--- /dev/null
++++ b/.claude/agents/pipeline-test-agent.md
+@@ -0,0 +1,24 @@
++---
++name: pipeline-test-agent
++description: Writes and runs tests for bronze, silver and gold. Tests against the written requirements, not the developers reasoning.
++tools: Read, Grep, Glob, Write, Edit, Bash
++model: sonnet
++---
++You test the pipelines. You own bpte/tests/pipeline/.
++
++Write tests from bpte/data-model/ and the requirements, not from how the code happens to work. Check:
++- Bronze is never modified, and replaying gives identical results.
++- Silver ID matching: exact match, no match, several matches.
++- Duplicate, late and out-of-order data are handled.
++- Unknown BMS fields are kept.
++- Gold records the method and version, and rebuilding from silver reproduces the same results.
++Use data from bpte/tests/data/. Run the tests. Report failures with the requirement each one breaks. Do not fix pipeline code.
++
++Working rules (all agents):
++- Read bpte/CLAUDE.md first. It is the source of truth. Read only the other files you need.
++- Never invent facts, numbers or targets. Mark unknowns as [__] and list them in your report.
++- Stay inside the folder you own. If you need a change elsewhere, say so in your report.
++- Keep deferred requirements and their IDs. Mark them "Later", never delete them.
++- Plain role names: Battery manager, Admin, Data connector.
++- Final report: 15 lines or fewer. Say what changed, what is unverified, and open questions. No file dumps.
++- Maximum 2 fix rounds. If still blocked, stop and report the blocker.
+diff --git a/.claude/agents/review-agent.md b/.claude/agents/review-agent.md
+new file mode 100644
+index 0000000..bef0cc0
+--- /dev/null
++++ b/.claude/agents/review-agent.md
+@@ -0,0 +1,24 @@
++---
++name: review-agent
++description: Read-only reviewer. Compares docs, data model and code to bpte/CLAUDE.md and flags contradictions and unsupported claims. Use last.
++tools: Read, Grep, Glob
++model: sonnet
++---
++You are the reviewer. You change nothing.
++
++Compare bpte/docs/, bpte/data-model/, apps/pipelines/, apps/api/, apps/web/ and bpte/tests/ against bpte/CLAUDE.md. List:
++- Contradictions between files.
++- Invented numbers, targets or claims.
++- Anything that still assumes the consumer portal, claims, cohort analytics or the old station direction is in the first release.
++- Requirements with no test, and tests with no requirement.
++- Deferred IDs that went missing.
++Report by severity, with file and line for each. If two files disagree and you cannot tell which is right, say so. Escalate to the lead; do not guess.
++
++Working rules (all agents):
++- Read bpte/CLAUDE.md first. It is the source of truth. Read only the other files you need.
++- Never invent facts, numbers or targets. Mark unknowns as [__] and list them in your report.
++- Stay inside the folder you own. If you need a change elsewhere, say so in your report.
++- Keep deferred requirements and their IDs. Mark them "Later", never delete them.
++- Plain role names: Battery manager, Admin, Data connector.
++- Final report: 15 lines or fewer. Say what changed, what is unverified, and open questions. No file dumps.
++- Maximum 2 fix rounds. If still blocked, stop and report the blocker.
+diff --git a/.claude/agents/tenant-test-agent.md b/.claude/agents/tenant-test-agent.md
+new file mode 100644
+index 0000000..f0631c3
+--- /dev/null
++++ b/.claude/agents/tenant-test-agent.md
+@@ -0,0 +1,18 @@
++---
++name: tenant-test-agent
++description: Proves one manufacturer can never see another manufacturers data. Writes and runs tenant isolation tests.
++tools: Read, Grep, Glob, Write, Edit, Bash
++model: sonnet
++---
++You test tenant isolation. You own bpte/tests/tenant/.
++
++Using the two tenants in bpte/tests/data/, try to read tenant B data as tenant A through every path: each API endpoint, filters, search, exports, direct ID lookups, and the dashboard data calls. Also test each role. Any leak is a failure. Run the tests and report failures. Do not fix code.
++
++Working rules (all agents):
++- Read bpte/CLAUDE.md first. It is the source of truth. Read only the other files you need.
++- Never invent facts, numbers or targets. Mark unknowns as [__] and list them in your report.
++- Stay inside the folder you own. If you need a change elsewhere, say so in your report.
++- Keep deferred requirements and their IDs. Mark them "Later", never delete them.
++- Plain role names: Battery manager, Admin, Data connector.
++- Final report: 15 lines or fewer. Say what changed, what is unverified, and open questions. No file dumps.
++- Maximum 2 fix rounds. If still blocked, stop and report the blocker.
+diff --git a/.claude/agents/test-data-agent.md b/.claude/agents/test-data-agent.md
+new file mode 100644
+index 0000000..fba9d0a
+--- /dev/null
++++ b/.claude/agents/test-data-agent.md
+@@ -0,0 +1,23 @@
++---
++name: test-data-agent
++description: Generates synthetic factory files and BMS messages, including deliberate defects, for testing BPTE. Use before the test agents.
++tools: Read, Grep, Glob, Write, Bash
++model: haiku
++---
++You generate test data. You own bpte/tests/data/.
++
++Create deterministic synthetic data (fixed random seed):
++- Factory files: batteries with cells, lots, build line and date, test results.
++- BMS messages: voltage, current, temperature, charge, cycles, faults.
++- Two tenants (manufacturers) with separate batteries.
++- A defect catalogue, each with a tag and a short note: duplicates, gaps, late messages, out-of-order messages, mismatched IDs, missing fields, unknown extra fields, bad units.
++Write bpte/tests/data/README.md listing every dataset and defect. Do not write tests.
++
++Working rules (all agents):
++- Read bpte/CLAUDE.md first. It is the source of truth. Read only the other files you need.
++- Never invent facts, numbers or targets. Mark unknowns as [__] and list them in your report.
++- Stay inside the folder you own. If you need a change elsewhere, say so in your report.
++- Keep deferred requirements and their IDs. Mark them "Later", never delete them.
++- Plain role names: Battery manager, Admin, Data connector.
++- Final report: 15 lines or fewer. Say what changed, what is unverified, and open questions. No file dumps.
++- Maximum 2 fix rounds. If still blocked, stop and report the blocker.
+diff --git a/.claude/commands/docs-first.md b/.claude/commands/docs-first.md
+new file mode 100644
+index 0000000..53d7357
+--- /dev/null
++++ b/.claude/commands/docs-first.md
+@@ -0,0 +1,11 @@
++---
++description: Docs-first pass. Rework the docs and data model only, then review. No code or test agents.
++argument-hint: [optional focus]
++---
++Read bpte/CLAUDE.md. Do the docs-first part of the BPTE redesign. Focus (if given): $ARGUMENTS
++
++1. Write bpte/PLAN.md: what changes in the docs, what is deferred, and what you will ask the agents to do. Stop and show me.
++2. After I approve: run data-model-agent (opus), then docs-agent (sonnet).
++3. Run review-agent (sonnet) last.
++Rules: never invent numbers; mark unknowns [__]; keep deferred IDs marked "Later"; agents report in 15 lines or fewer; max 2 fix rounds; give agents file paths, not pasted text.
++Write bpte/STATUS.md with done, unverified, open questions and decisions that need me.
+diff --git a/.claude/commands/redesign.md b/.claude/commands/redesign.md
+new file mode 100644
+index 0000000..5a8a5ac
+--- /dev/null
++++ b/.claude/commands/redesign.md
+@@ -0,0 +1,39 @@
++---
++description: Redesign the quality loop project into the revised BPTE product, using sub agents for dev and testing
++argument-hint: [optional focus, for example "docs only"]
++---
++You are the lead for redesigning the Closed-Loop Quality platform into the revised BPTE product. Read bpte/CLAUDE.md first. Do not reuse anything from the old station, swap or rider direction. Focus (if given): $ARGUMENTS
++
++PRODUCT
++One record per battery through its life: (1) Birth: factory data into a passport; (2) Ops: BMS field data plus deployment; (3) Dashboard: both for the battery manager. The battery ID joins them. This is the foundation (M1 and M2). M3 to M6 are deferred, not deleted.
++
++RULES
++- Inspect the repo and docs first. Report what exists.
++- Never invent facts or numbers. Mark unknowns [__].
++- Keep deferred requirement IDs, marked "Later".
++- Medallion architecture: bronze raw, silver matched and cleaned, gold calculated and versioned. Manufacturer ID on every record.
++- Ask me before choosing a data platform or table format. Present options.
++- Small commits. Stay inside the project.
++
++PHASE 1: PLAN (you only, no sub agents)
++Write bpte/PLAN.md: current state, what changes, what is deferred, the work split, the order, and the model for each agent. Stop and show me the plan.
++
++PHASE 2: AGENTS (after I approve the plan)
++Each agent is defined in .claude/agents/ with its own model. Do not override the model unless I say so. Before spawning, state the agent count and model for each, and wait for my OK.
++Order:
++1. data-model-agent (opus). Wait for it to finish.
++2. In parallel: docs-agent, pipeline-agent, api-agent, dashboard-agent.
++3. test-data-agent, then in parallel: pipeline-test-agent, tenant-test-agent, e2e-test-agent.
++4. review-agent last.
++
++TOKEN RULES
++- Give each agent file paths, not pasted documents.
++- Agents report in 15 lines or fewer.
++- Max 2 fix rounds per agent, then report the blocker to me.
++- Do not re-read large documents already summarised in bpte/PLAN.md.
++
++PHASE 3: INTEGRATE
++Merge, run all tests, then review-agent. Write bpte/STATUS.md: done, failing, unverified, assumptions, open questions, and the decisions that need me (platform and table format first).
++
++DONE MEANS
++Docs and code agree with each other and with bpte/CLAUDE.md. All tests pass, or each failure has a reason. No invented numbers. Deferred features are marked Later.
+diff --git a/.claude/hooks/guard.mjs b/.claude/hooks/guard.mjs
+index 35fb1a6..b5a1b58 100644
+--- a/.claude/hooks/guard.mjs
++++ b/.claude/hooks/guard.mjs
+@@ -59,11 +59,10 @@ if (/\bSET\s+(SESSION\s+)?app\.consumer_id\b/i.test(texts) || /set_config\(\s*'a
+   block("set app.consumer_id only with set_config('app.consumer_id', $1, true) inside withTenant (D-02).");
+ }
+ 
+-// 4. No internal quality data in the schema, seed or contracts (test files may hold canary checks)
++// 4. (Retired for BPTE.) The old rule blocked supplier, cohort and cell-lot data in db/ and contracts,
++// because SCR-04 was a consumer portal. The manufacturer view needs that data. When a consumer-facing
++// view is built (later), add a check scoped to that view's contracts instead.
+ const isTest = /(^|\/)(test|tests|__tests__)\/|\.(test|spec)\.[cm]?[jt]sx?$/.test(rel);
+-if (!isTest && /^(db\/|packages\/contracts\/)/.test(rel) && /(^|[^a-z])(supplier|cohort|cell_?lot)/i.test(texts)) {
+-  block('supplier, cohort and cell-lot data must never enter the consumer portal (SCR-04-FR-04, CLAUDE.md non-negotiable 4).');
+-}
+ 
+ // 5. Data boundary: DB clients only under apps/api/src/data
+ if (/^apps\/(api|web)\/src\//.test(rel) && !/^apps\/api\/src\/data\//.test(rel) && !isTest &&
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 4bc9bda..07b1815 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -1,6 +1,10 @@
+-# 82V QualityLoop · Fleet Health (SCR-04)
++# 82V QualityLoop · BPTE (battery passport, BMS tracking, dashboard)
+ 
+-Mock-first build of the consumer fleet health portal. Read these before any non-trivial change:
++**Direction (Nov 23, 2026):** this repo is being changed from the consumer fleet health portal (SCR-04) into the manufacturer-side platform described in `bpte/CLAUDE.md`: birth data, BMS field data, a dashboard for the battery manager, on medallion data layers. Existing code is the starting point; change it, don't restart. Read `bpte/CLAUDE.md` for the product and data rules.
++
++The SCR-04 documents below are the **old** plan. Where they conflict with `bpte/CLAUDE.md`, `bpte/CLAUDE.md` wins. The non-negotiables below still apply unless marked.
++
++Read these before any non-trivial change:
+ 
+ 1. `docs/architecture-plan.md`: the agreed plan (Nov 13, 2026).
+ 2. `docs/plan-amendments.md`: **binding fixes from the audit. Where they conflict with the plan, the amendments win.**
+@@ -31,10 +35,10 @@ Mock-first build of the consumer fleet health portal. Read these before any non-
+ 
+ These are checked by hooks and reviewers. Breaking one is a blocker, not a style issue.
+ 
+-1. **The consumer comes from the verified token only.** It never comes from a URL, query or body, except in the documented mock-only exceptions in amendment D-04.
++1. **The tenant comes from the verified token only.** (Written as "consumer" in the old docs; the tenant is now the manufacturer. The data-model step renames it.) It never comes from a URL, query or body, except in the documented mock-only exceptions in amendment D-04.
+ 2. **Every tenant query runs inside `withTenant(consumerId, fn)`.** It opens a transaction and calls `set_config('app.consumer_id', $1, true)`. Never use plain `SET`, and never query tenant tables outside it.
+ 3. **RLS is never weakened.** No `BYPASSRLS`, no `DISABLE ROW LEVEL SECURITY`, no `NO FORCE`. The app connects as `ql_app`, which owns nothing.
+-4. **Internal quality data never enters this portal.** No supplier, cohort, cell lot or cell-level columns, fields or strings in `db/`, `packages/contracts` or API responses.
++4. **Retired for the manufacturer view.** Supplier, lot and cell data are now allowed there. Any later consumer-facing view must not expose them; add a check for that view when it is built.
+ 5. **Data boundary.** Only `apps/api/src/data/**` may import `pg`, `kysely` or a vendor SDK. ESLint `no-restricted-imports` enforces it.
+ 6. **Responses are whitelisted DTOs** built from contracts schemas (`schema.parse` on the way out). Never spread a database row into a response.
+ 7. **Another consumer's resource returns 404, not 403.** A missing permission returns 403.
+@@ -53,9 +57,9 @@ These are checked by hooks and reviewers. Breaking one is a blocker, not a style
+ 
+ ## Working rules for Claude
+ 
+-- Work one build step at a time with `/build-step N`. Don't start work from a later step early.
++- For BPTE work, use `/docs-first` then `/redesign`. `/build-step N` is for the old SCR-04 steps only.
+ - Never run `git push`, never merge, and never edit `.env` files. `.env.example` is fine.
+-- If the plan or amendments are ambiguous, choose the option that is safer for tenant isolation. Record it under "Decisions taken" in `docs/build-steps.md` and continue.
++- If the plan or amendments are ambiguous, choose the option that is safer for tenant isolation. Record it under "Decisions taken" in `bpte/STATUS.md` and continue.
+ - Keep `docs/build-steps.md` current: tick acceptance checks only after running them.
+ 
+ ## Token use
+@@ -69,3 +73,11 @@ These are checked by hooks and reviewers. Breaking one is a blocker, not a style
+ ## Compact instructions
+ 
+ When compacting, keep: the current step number and status, the acceptance checks still open, the D-nn amendments in play, the files changed in this step, and any failing test names with their errors. Drop file contents that are already committed, and passing test output.
++
++## BPTE changes (in progress)
++
++- Direction and rules: `bpte/CLAUDE.md`. Design outputs (plan, status, data model, new docs) go in `bpte/`. Code goes in the real repo: `apps/api`, `apps/web`, `packages/contracts`, `db/`, and a new `apps/pipelines` for bronze, silver and gold.
++- BPTE agents (`data-model-agent`, `docs-agent`, `pipeline-agent`, `api-agent`, `dashboard-agent`, `test-data-agent`, `pipeline-test-agent`, `tenant-test-agent`, `e2e-test-agent`, `review-agent`) have models set in their frontmatter. They extend existing code and run `pnpm verify`.
++- Commands: `/docs-first` (data model, docs, review; start here) and `/redesign` (full run, stops after the plan for approval).
++- The SCR-04 `/build-step` flow and `docs/build-steps.md` describe the old build. Leave them as history; don't continue them.
++- Known to change: the guard hook's supplier rule is retired; the supplier canary in `apps/api/src/modules/fleet/endpoints.int.test.ts` and any D-12 checks that forbid supplier or lot data will fail by design when manufacturer data arrives. The data-model step lists which to retire.
+diff --git a/bpte/CLAUDE.md b/bpte/CLAUDE.md
+new file mode 100644
+index 0000000..bfe658d
+--- /dev/null
++++ b/bpte/CLAUDE.md
+@@ -0,0 +1,73 @@
++# BPTE: project context
++
++## Who is who
++- **82 Volts**: the company building the product (us).
++- **Customer**: the battery manufacturer. First manufacturer not yet named.
++- Earlier work assumed Yulu (and Yuma Energy) as the client. That direction was scrapped; do not reuse its station, swap or rider scope.
++
++## What we are building
++A platform that keeps one record per battery through its whole life, in three parts:
++1. **Birth**: factory data (cells, supplier lots, build line and date, test results, firmware) captured into a battery passport.
++2. **Ops**: field data from the battery's BMS (voltage, current, temperature, charge, cycles, faults), plus where the battery is deployed and who holds it.
++3. **Dashboard**: both combined and calculated, shown to the battery manager.
++
++The battery ID joins all three. If the factory ID and the BMS ID do not match, the join breaks. This is the main dependency.
++
++## Relationship to the quality loop
++This is the **foundation** of the Closed-Loop Quality platform (project docs): it covers M1 (birth record) and M2 (field telemetry and health). The loop itself (M3 cohort analytics, recall scoping, 8D; M4 consumer portal; M5 warranty; M6 passport export) is "later", built on the same data.
++
++## First release
++- In: connect the first manufacturer's BMS data; passport per battery; bronze/silver/gold data layers; health, cycles and rule-based warnings; fleet view and battery view; login with role-based access; data coverage and source labels.
++- Not yet: consumer portal, supplier/lot/line comparison, recall and warranty workflows, ML predictions, native mobile apps, regulatory passport exports.
++
++## Users (plain names)
++- **Battery manager**: main user, watches the dashboard.
++- **Admin**: adds users, connects batteries, manages access.
++- **Data connector**: not a person, a secure login for BMS data.
++- **82 Volts**: builds and supports.
++Later: the manufacturer's own customers get their own view.
++
++## Data principles
++- Medallion architecture: **bronze** raw as received and never edited; **silver** matched to the passport, cleaned, tagged; **gold** calculated results.
++- Keep raw data so any calculation can be redone.
++- Classifications are tags and attributes, not fixed columns.
++- Every calculation records its method and version. Keep a metric dictionary.
++- Every figure shows its source (from BMS, calculated, registered) and freshness.
++- Manufacturer ID on every record from day one (tenant separation, enforced in the data layer).
++- Unknown BMS fields are stored, not dropped.
++
++## Architecture notes
++- Target is Azure (from the project docs): BMS over MQTT into IoT Hub, factory files through Data Factory, Entra ID, Key Vault, India data residency.
++- Needs on top of that: a lakehouse with a chosen table format, an ID-matching step in silver, a serving layer for the dashboard, versioned calculations.
++- A faster path for warnings is only needed if the "alerts within 5 minutes" target is kept.
++- Deferred for now: consumer API, claims workflow, 8D integration.
++
++## Open questions
++- Who is the first manufacturer, and which batteries?
++- What does the BMS expose (fields, frequency, interface), and can we get the protocol documents?
++- Where does birth data live today and in what format? Is there a matching ID?
++- How is deployment recorded (customer entry or dispatch records)?
++- What are the battery manager's first five questions?
++- Platform and table format (for example Databricks or Fabric; Delta or Iceberg)?
++- Do contracts allow use of field data from batteries the manufacturer's customers own?
++
++## Working preferences
++- Use simple words. Short, scannable answers. Business-friendly role names.
++- When asked for the product view, do not bring in money or pricing.
++- When asked for the engineering view, talk architecture, data and integrations.
++- Do not state targets, timelines or effort for this scope until discovery confirms the data.
++
++## Deliverables so far
++- Product overview deck (3 parts, 9 slides), published as an artifact.
++- Earlier station-focused page (scrapped direction), still published and private.
++
++## Repo layout and who owns what
++Design outputs go in bpte/. Code goes in the existing repo.
++- bpte/docs/ : rewritten Scope and Requirements (docs-agent)
++- bpte/data-model/ : data dictionary, entities, ID matching, metrics (data-model-agent). Also owns new migrations in db/migrations and schema types in packages/contracts.
++- apps/pipelines/ : bronze, silver, gold (pipeline-agent)
++- apps/api/ : read and write APIs (api-agent)
++- apps/web/ : Fleet view and Battery view (dashboard-agent)
++- bpte/tests/data/ : synthetic data (test-data-agent); bpte/tests/pipeline/, bpte/tests/tenant/, bpte/tests/e2e/ (test agents)
++- bpte/PLAN.md and bpte/STATUS.md : written by the lead
++Existing code is reused. Each agent edits only its own area and reports anything it needs changed elsewhere.
+diff --git a/bpte/api/.gitkeep b/bpte/api/.gitkeep
+new file mode 100644
+index 0000000..e69de29
+diff --git a/bpte/dashboard/.gitkeep b/bpte/dashboard/.gitkeep
+new file mode 100644
+index 0000000..e69de29
+diff --git a/bpte/data-model/.gitkeep b/bpte/data-model/.gitkeep
+new file mode 100644
+index 0000000..e69de29
+diff --git a/bpte/docs/.gitkeep b/bpte/docs/.gitkeep
+new file mode 100644
+index 0000000..e69de29
+diff --git a/bpte/pipelines/.gitkeep b/bpte/pipelines/.gitkeep
+new file mode 100644
+index 0000000..e69de29
+diff --git a/bpte/tests/.gitkeep b/bpte/tests/.gitkeep
+new file mode 100644
+index 0000000..e69de29

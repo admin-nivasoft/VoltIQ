@@ -25,13 +25,14 @@ export interface DemoUser {
   manufacturerId: string;
 }
 
+/** Null means the factory file did not include it: shown as "Not recorded", never stored as text. */
 export interface BirthRecord {
   buildDate: string; // ISO date
-  line: string;
-  model: string;
-  chemistry: string;
-  ratedCapacityAh: number;
-  firmware: string;
+  line: string | null;
+  model: string | null;
+  chemistry: string | null;
+  ratedCapacityAh: number | null;
+  firmware: string | null;
 }
 export interface DemoBattery {
   id: string;
@@ -71,6 +72,7 @@ export const USERS: DemoUser[] = [
   { id: 'a1000000-0000-4000-8000-0000000000b1', name: 'Ananya Desai', role: 'battery_manager', manufacturerId: LRB.id },
   { id: 'a1000000-0000-4000-8000-0000000000a1', name: 'Rohan Mehta', role: 'admin', manufacturerId: LRB.id },
   { id: 'b2000000-0000-4000-8000-0000000000b1', name: 'Ines Varga', role: 'battery_manager', manufacturerId: CPC.id },
+  { id: 'b2000000-0000-4000-8000-0000000000a1', name: 'Tomas Lindqvist', role: 'admin', manufacturerId: CPC.id },
 ];
 
 /**

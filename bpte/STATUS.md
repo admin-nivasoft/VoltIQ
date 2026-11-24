@@ -70,3 +70,24 @@ Minor:
 - **User:** data model is design only this pass.
 - **Lead:** unknown numbers stay `[__]`; unsourced formula methods are marked "proposed, to confirm".
 - **Lead:** ID matching is exact match only until protocol documents arrive (safer: avoids merging distinct batteries).
+
+## Sales demo (branch demo/bpte-mockup), 2026-11-24
+Four screens on sample data, browser only: Fleet overview, Battery view (SCR-03), Birth data import (SCR-06), BMS connection (SCR-07, BMS parts). Every figure carries its source, freshness and a "how this is worked out" panel from the metric dictionary.
+
+### Left out on purpose: sales must not promise these
+- We do not compute our own health (SoH) or cycle count. We show what the battery's BMS reports, labelled "reported by BMS".
+- No remaining-life prediction, no ML or anomaly detection, no health-trend warning (method not confirmed).
+- No supplier, lot or production-line comparison, no cohort analytics, recall scoping or 8D (M3).
+- No consumer or customer portal (M4), no warranty or claims (M5), no regulatory passport export (M6).
+- No alerts by email, SMS, webhook or Teams; warnings are on screen only.
+- No outlier-cell highlighting (the limit is not set).
+- No QR code lookup; no direct factory system (MES/ERP, OPC-UA) connection: factory data comes in as files, CSV in the demo; formats not decided.
+- No user management, warning-rule editor or audit-log screen yet; connectors cannot be created, rotated or disabled in the demo.
+- Thresholds, windows and severities on screen are example settings for a fictional manufacturer, not product defaults or recommendations.
+- No accuracy, latency, volume, uptime or timeline claims of any kind.
+
+### Contracts changes implied for later (packages/contracts not edited)
+- Demo-only zod schemas to move into contracts: `apps/web/src/demo/types.ts`, `types-battery.ts`, `types-imports.ts`, `types-connection.ts` (me, metric dictionary, fleet overview, battery list and detail, import preview/result/history, connection status, link result).
+- Roles `battery_manager` and `admin` and their permissions (`apps/web/src/demo/roles.ts`) replace the SCR-04 roles in `config/permissions.json` and `RoleSchema`.
+- `Me` gains `manufacturer` as the tenant; `consumer` goes.
+- A wrong HTTP method has no error code in `ErrorCodes`; the demo answers 404.

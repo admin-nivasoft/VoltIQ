@@ -65,6 +65,23 @@ Computed per manufacturer from per-battery values (silver reported values, gold 
 | `unmatched_id_count` | Unmatched IDs | count | calculated | silver.unmatched_record | `count(unmatched_record : status = open)` |
 | `open_warnings_by_severity` | Open warnings by severity | count per severity | calculated | warning | `count(warning : open)` grouped by severity |
 
+## Screen metrics: gaps, connector, imports, unknown fields (version 1, draft)
+Parameters: G = silence threshold `[__]`; P = period `[__]` (set per query, recorded in calculation_version parameters). Expected counts need the BMS send interval `[__]`.
+
+| metric_id | Label | Unit | Source | Inputs | Formula (words; symbols) | Unknowns |
+| --- | --- | --- | --- | --- | --- | --- |
+| `data_gaps` | Data gaps (per battery) | list of intervals (from, to, hours); max in hours | calculated | silver received_at / observed_at per battery | Silences longer than G inside P. Sort received times t_1..t_n in P (include P start and end as edges); a gap is each pair where `t_(i+1) - t_i > G`; output list of `(t_i, t_(i+1), hours)`. `max_gap(b) = max(hours)`, 0 if none. This `max_gap(b)` is the one used by `batteries_with_gaps`. Uses unique messages only (duplicates ignored) | G, P |
+| `data_coverage_daily_pct` | Data coverage, daily (per battery per day) | % | calculated | received_unique, expected, per day | Same formula as `data_coverage_pct` with P = one day (tenant-defined calendar day, timezone `[__]`); `received_unique_day / expected_day x 100` | send interval, day boundary timezone |
+| `connector_last_seen_at` | Connector last seen | timestamp | calculated | bronze received_at per Data connector | Max received_at over messages from the connector | none |
+| `connector_messages_received` | Connector messages received | count | calculated | bronze messages per connector | Count of messages received from the connector in P | P |
+| `connector_messages_rejected` | Connector messages rejected | count, grouped by reason | calculated | rejected messages with reason code | Count of rejected messages in P, grouped by reason; reason list `[__]` (to match pipeline reject codes) | P, reason codes |
+| `connector_data_coverage_pct` | Connector data coverage | % | calculated | per-battery received_unique, expected for batteries the connector serves | `sum(received_unique_b) / sum(expected_b) x 100`, b over batteries served by the connector, in P | P, send interval, how a battery maps to a connector `[__]` |
+| `unknown_fields_received` | Unknown BMS fields received | rows: field name, messages, batteries | calculated | `extra` of bronze/silver readings | In P, list distinct unrecognised field names found in `extra`; per field `messages = count(messages containing it)`, `batteries = count(distinct battery)`. Fields stay stored, never dropped | P |
+| `import_rows_loaded` | Import rows loaded | count (per ingestion batch, E27) | calculated | ingestion batch rows | Rows from the batch written to silver | none |
+| `import_rows_rejected` | Import rows rejected | count (per ingestion batch, E27) | calculated | ingestion batch rows with failure | Rows from the batch failing validation; reasons `[__]` | reject reasons |
+| `import_rows_unmatched` | Import rows unmatched | count (per ingestion batch, E27) | calculated | ingestion batch rows, ID matching result | Rows loaded but with no battery match (go to unmatched_record, see id-matching.md) | none |
+| `soh_reported_history` | Health reported by BMS, history | series of (observed_at, %) | bms (silver) | BMS SoH signal | No calculation. Valid reported values in time order, as received; never copied into gold | range `[__]` |
+
 ## Requirement-to-metric gaps
 - `energy_throughput_kwh` has no requirement that asks for it. Keep as draft or drop: `[__]` lead decision.
 - M2.6 usage profile has no metric defined. Inputs and formula `[__]`.

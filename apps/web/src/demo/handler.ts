@@ -4,22 +4,14 @@
 // user only, every route checks a permission, another manufacturer's data is never reachable, and
 // figures are worked out from the per-battery records the way bpte/data-model/metrics.md defines them.
 // Nothing leaves the browser, and nothing is saved: a reload starts again.
-import {
-  BATTERY_COUNT,
-  buildBatteries,
-  buildFreshness,
-  buildUnmatched,
-  EXAMPLE_SETTINGS,
-  MANUFACTURERS,
-  RULE_LIMITS,
-  USERS,
-  type DemoBattery,
-  type DemoManufacturer,
-  type DemoUnmatched,
-  type DemoUser,
-} from './data';
+import { EXAMPLE_SETTINGS, MANUFACTURERS, RULE_LIMITS, USERS, type DemoBattery, type DemoUser } from './data';
+import { batteryRoutes } from './endpoints/battery';
+import { connectionRoutes } from './endpoints/connection';
+import { fail, reply, type RouteContext, type RouteModule } from './endpoints/context';
+import { importsRoutes } from './endpoints/imports';
 import { METRICS } from './metrics';
 import { DEMO_POLICY } from './roles';
+import { resetWorld, world, type Tenant } from './world';
 import type {
   Basis,
   BatteryRef,
@@ -39,34 +31,7 @@ export const setDemoLatency = (ms: number) => {
   latencyMs = ms;
 };
 
-interface Tenant {
-  manufacturer: DemoManufacturer;
-  batteries: DemoBattery[];
-  unmatched: DemoUnmatched[];
-  freshness: ReturnType<typeof buildFreshness>;
-  now: number;
-}
-let tenants: Map<string, Tenant> | null = null;
 let currentUserId: string | null | undefined;
-
-function world(): Map<string, Tenant> {
-  if (!tenants) {
-    const now = Date.now();
-    tenants = new Map(
-      MANUFACTURERS.map((m) => [
-        m.id,
-        {
-          manufacturer: m,
-          batteries: buildBatteries(m, now, BATTERY_COUNT[m.id] ?? 0),
-          unmatched: buildUnmatched(m, now),
-          freshness: buildFreshness(now),
-          now,
-        },
-      ]),
-    );
-  }
-  return tenants;
-}
 
 function readUser(): DemoUser | null {
   if (currentUserId === undefined) {
@@ -90,17 +55,12 @@ function writeUser(id: string | null) {
 
 /** Forgets the demo user and every change made, then lets the caller reload. */
 export function resetDemo(): void {
-  tenants = null;
+  resetWorld();
   writeUser(null);
 }
 
-const reply = (status: number, body?: unknown) =>
-  new Response(status === 204 ? null : JSON.stringify(body ?? {}), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  });
-const fail = (status: number, code: string, message: string) =>
-  reply(status, { error: { code, message } });
+/** Each screen's endpoints live in their own module (src/demo/endpoints/), tried in this order. */
+const MODULES: RouteModule[] = [batteryRoutes, importsRoutes, connectionRoutes];
 
 function intParam(url: URL, name: string, def: number, min: number, max: number): number | null {
   const raw = url.searchParams.get(name);
@@ -250,9 +210,9 @@ function overview(t: Tenant): FleetOverview {
       value: N,
       basis: basis(
         'batteries_registered',
-        `${plural(N, 'battery record')}: ${N - noBirth.length} from birth records, ${noBirth.length} entered by an Admin.`,
+        `${plural(N, 'battery record')}: ${N - noBirth.length} from factory records, ${noBirth.length} entered by an Admin.`,
         noBirth.length
-          ? [`${plural(noBirth.length, 'battery', 'batteries')} ${noBirth.length === 1 ? 'has' : 'have'} no birth record, so build date, model and rated capacity are not recorded for ${noBirth.length === 1 ? 'it' : 'them'}.`]
+          ? [`${plural(noBirth.length, 'battery', 'batteries')} ${noBirth.length === 1 ? 'has' : 'have'} no factory record, so build date, model and rated capacity are not recorded for ${noBirth.length === 1 ? 'it' : 'them'}.`]
           : [],
       ),
     },
@@ -269,7 +229,7 @@ function overview(t: Tenant): FleetOverview {
     noBirthRecord: {
       value: noBirth.length,
       batteries: noBirth.map(ref),
-      basis: basis('batteries_no_birth_record', `Battery records compared with birth records for all ${N} batteries.`),
+      basis: basis('batteries_no_birth_record', `Battery records compared with factory records for all ${N} batteries.`),
     },
     health: distribution(
       t,
@@ -327,7 +287,7 @@ function overview(t: Tenant): FleetOverview {
       })),
       basis: basis(
         'unmatched_id_count',
-        `${plural(t.unmatched.length, 'BMS ID')} with ${held.toLocaleString('en-GB')} messages held.`,
+        `${plural(t.unmatched.length, 'battery ID')} with ${held.toLocaleString('en-GB')} messages held.`,
         held ? ['Held data is in no figure on this page until the ID is linked to a battery.'] : [],
       ),
     },
@@ -457,6 +417,11 @@ function route(method: string, path: string, body: unknown): Response {
     });
   }
 
+  const ctx: RouteContext = { method, url, body, user, tenant, need };
+  for (const m of MODULES) {
+    const res = m(ctx);
+    if (res) return res;
+  }
   return fail(404, 'not_found', 'Not found');
 }
 

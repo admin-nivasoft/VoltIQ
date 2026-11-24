@@ -13,8 +13,8 @@ import { useSignOut } from './session';
 
 const NAV = [
   { to: '/', label: 'Fleet overview', icon: LayoutDashboard, end: true },
-  { to: '/imports', label: 'Birth data import', icon: Upload, end: false },
-  { to: '/connection', label: 'BMS connection', icon: RadioTower, end: false },
+  { to: '/imports', label: 'Factory data import', icon: Upload, end: false },
+  { to: '/connection', label: 'Data connection', icon: RadioTower, end: false },
 ] as const;
 
 /** The overview query doubles as the shell's "last updated" source, so it is shared, not refetched. */

@@ -76,11 +76,11 @@ describe('production bundle', () => {
 const DEMO_MARKERS = [
   'Sample data only',
   'Choose a demo user',
-  'Aurora Motors',
-  'Meridian Storage Systems',
-  'Northgate Logistics',
+  'Lumen Ridge Batteries',
+  'Corvane Power Cells',
+  'Rohan Mehta',
   'ql-demo-user',
-  'Priya Nair',
+  'Ananya Desai',
 ];
 
 describe('demo bundle', () => {
@@ -106,5 +106,13 @@ describe('demo bundle', () => {
   it('VITE_DEMO true: the banner, the sample data and the in-browser API are all there', async () => {
     const js = await bundle(undefined, 'true');
     for (const m of DEMO_MARKERS) expect(js, m).toContain(m);
+  }, 180_000);
+});
+
+describe('demo bundle: the old consumer portal is gone from it', () => {
+  it('VITE_DEMO true alone carries no dev login switcher and none of the old consumer sample names', async () => {
+    const js = await bundle(undefined, 'true');
+    for (const m of ['Aurora Motors', 'Meridian Storage Systems', 'Northgate Logistics', 'Priya Nair', 'Development login', 'Not for production'])
+      expect(js, m).not.toContain(m);
   }, 180_000);
 });

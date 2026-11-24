@@ -1,85 +1,88 @@
-import AxeBuilder from '@axe-core/playwright';
-import type { Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+// The demo has no settings screen of its own. What it has is the example settings (reporting window,
+// send interval, coverage period, rule limits) that the figures use, and the role permissions that
+// decide who may import and link. This suite covers both, and that the second manufacturer stays hidden.
+import { expect, goTo, signIn, test } from './fixtures';
 
-async function pick(page: Page, company: RegExp, person: string, visit = true) {
-  if (visit) await page.goto('/');
-  await page.getByRole('group', { name: company }).getByRole('button', { name: person }).click();
-  await expect(page.getByRole('heading', { level: 1 })).not.toHaveText(/sign in/i);
-}
-const openSettings = async (page: Page) => {
-  await page.getByRole('link', { name: 'Settings', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
-};
+test('a battery manager sees no upload or link controls anywhere', async ({ page }) => {
+  await signIn(page, 'Battery manager');
 
-test('channels: a "fail" address fails the test message and shows in the delivery log, with no server', async ({
-  page,
-}) => {
-  await pick(page, /Aurora Motors/, 'Consumer admin');
-  await openSettings(page);
-  await page.getByLabel('Email address').fill('fail@example.test');
-  await page.getByRole('button', { name: 'Save channels' }).click();
-  await expect(page.getByText(/Channels saved/)).toBeAttached();
-  await page.getByRole('button', { name: /Send test message to Email/ }).click();
-  await expect(page.getByText(/Test message to Email failed/)).toBeVisible();
-  const first = page.getByRole('region', { name: 'Delivery log table' }).getByRole('row').nth(1);
-  await expect(first).toContainText('Test message');
-  await expect(first).toContainText('Failed, attempt 1');
+  await goTo(page, 'Factory data import');
+  await expect(page.getByText('Only an Admin can import files')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Choose a file' })).toHaveCount(0);
+  await expect(page.getByRole('radio')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Check file|Import file|Choose a CSV file/ })).toHaveCount(0);
+  await expect(page.locator('input[type="file"]')).toHaveCount(0);
+  // The history is still readable.
+  await expect(page.getByRole('heading', { name: 'Import history' })).toBeVisible();
+  await expect(page.getByText('birth-records-sample.csv').first()).toBeVisible();
+
+  await goTo(page, 'Data connection');
+  const section = page.getByRole('region', { name: 'Unrecognised battery IDs', exact: true });
+  await expect(section).toContainText('BMS-7F3A9C');
+  await expect(section.getByRole('button', { name: /Link/ })).toHaveCount(0);
+  await expect(section.getByRole('combobox')).toHaveCount(0);
 });
 
-test('the delivery log already has failed attempts to look at', async ({ page }) => {
-  await pick(page, /Aurora Motors/, 'Consumer admin');
-  await openSettings(page);
-  await expect(page.getByText('Failed, attempt 3')).toBeVisible();
-});
-
-test('a consumer admin has no policy editor; the platform admin does, and an edit really changes what a fleet manager can do', async ({
-  page,
-}) => {
-  await pick(page, /Aurora Motors/, 'Consumer admin');
-  await openSettings(page);
-  await expect(page.getByRole('heading', { name: 'Role policy' })).toHaveCount(0);
-
-  await page.getByRole('button', { name: /Sign out/ }).click();
-  await expect(page.getByRole('heading', { name: 'Choose a demo user' })).toBeVisible();
-  await pick(page, /Platform administration/, 'Platform admin', false);
-  await openSettings(page);
-  await page.getByRole('checkbox', { name: 'Fleet manager: Acknowledge alerts' }).uncheck();
-  await page.getByRole('button', { name: 'Save as a new version' }).click();
-  await expect(page.getByText(/Saved as version 2/).first()).toBeVisible();
-
-  await page.getByRole('button', { name: /Sign out/ }).click();
-  await expect(page.getByRole('heading', { name: 'Choose a demo user' })).toBeVisible();
-  await pick(page, /Aurora Motors/, 'Fleet manager', false);
+test('an admin has the controls the battery manager lacks', async ({ page }) => {
+  await signIn(page, 'Admin');
+  await goTo(page, 'Factory data import');
+  await expect(page.getByRole('heading', { name: 'Choose a file' })).toBeVisible();
+  await expect(page.getByRole('radio')).toHaveCount(4);
+  await expect(page.getByRole('button', { name: 'Choose a CSV file', exact: true })).toBeVisible();
+  await goTo(page, 'Data connection');
   await expect(
-    page.getByRole('region', { name: 'Alerts' }).getByRole('article').first(),
+    page
+      .getByRole('region', { name: 'Unrecognised battery IDs', exact: true })
+      .getByRole('button', { name: 'Link to a battery' })
+      .first(),
   ).toBeVisible();
-  await expect(page.getByRole('button', { name: /^Acknowledge/ })).toHaveCount(0);
 });
 
-for (const width of [390, 768, 1440]) {
-  test.describe(`axe on the demo settings pages at ${width}px`, () => {
-    test.use({ viewport: { width, height: 900 } });
-    const serious = async (page: Page) =>
-      (
-        await new AxeBuilder({ page })
-          .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-          .analyze()
-      ).violations
-        .filter((v) => v.impact === 'serious' || v.impact === 'critical')
-        .map((v) => `${v.impact}: ${v.id} ${v.nodes[0]?.target.join(' ')}`);
+test('a battery without a factory record offers the import link to an admin only', async ({ page }) => {
+  const openNoBirthBattery = async () => {
+    await page
+      .getByRole('region', { name: 'Data quality' })
+      .getByRole('link', { name: /^LRB-/ })
+      .first()
+      .click();
+    await expect(page.getByText('No factory record for this battery').first()).toBeVisible();
+  };
+  await signIn(page, 'Admin');
+  await openNoBirthBattery();
+  await expect(page.getByRole('link', { name: 'Import factory data' })).toBeVisible();
 
-    test('consumer admin and platform admin settings', async ({ page }) => {
-      await pick(page, /Aurora Motors/, 'Consumer admin');
-      await openSettings(page);
-      await expect(page.getByText('Failed, attempt 3')).toBeVisible();
-      expect(await serious(page)).toEqual([]);
-      await page.getByRole('button', { name: /Sign out/ }).click();
-      await expect(page.getByRole('heading', { name: 'Choose a demo user' })).toBeVisible();
-      await pick(page, /Platform administration/, 'Platform admin', false);
-      await openSettings(page);
-      await expect(page.getByRole('heading', { name: 'Role policy' })).toBeVisible();
-      expect(await serious(page)).toEqual([]);
-    });
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await signIn(page, 'Battery manager', false);
+  await openNoBirthBattery();
+  await expect(page.getByRole('link', { name: 'Import factory data' })).toHaveCount(0);
+});
+
+test('the example settings the figures use are shown with their figures, as examples', async ({ page }) => {
+  await signIn(page, 'Battery manager');
+  await expect(page.getByText(/Sent data in the last 24 hours \(example setting\)/)).toBeVisible();
+  const trigger = page.getByRole('button', { name: /^How Reporting now comes from|^How Reporting now is worked out/ });
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.focus();
+  await expect(page.getByRole('tooltip')).toContainText('24-hour window (example setting)');
+});
+
+test("another manufacturer's batteries are never on any screen, and its battery addresses say not found", async ({ page }) => {
+  await signIn(page, 'Admin');
+  const everyScreen = async () => {
+    const text = await page.locator('body').innerText();
+    expect(text).not.toMatch(/Corvane|CPC-|BMS-CPC-ORPHAN|Ines Varga|Tomas Lindqvist/);
+  };
+  await everyScreen();
+  await goTo(page, 'Factory data import');
+  await everyScreen();
+  await goTo(page, 'Data connection');
+  await everyScreen();
+
+  // A Corvane battery id typed into the address bar: the app has no such battery for this user.
+  await page.evaluate(() => {
+    window.history.pushState({}, '', '/batteries/b3000000-0000-4000-9000-000000000001');
+    window.dispatchEvent(new PopStateEvent('popstate'));
   });
-}
+  await expect(page.getByText('We could not find that battery')).toBeVisible();
+  await everyScreen();
+});

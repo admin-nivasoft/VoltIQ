@@ -29,7 +29,7 @@ const COLUMNS: {
   { field: 'holder', label: 'Holder, site' },
   { field: 'soh', label: 'Health (reported by BMS)', unit: '%', numeric: true, source: 'bms', metricId: 'soh_reported_pct' },
   { field: 'cycles', label: 'Cycles (reported by BMS)', numeric: true, source: 'bms', metricId: 'cycle_count_reported' },
-  { field: 'coverage', label: 'Data coverage', unit: '%', numeric: true, source: 'calculated', metricId: 'data_coverage_pct' },
+  { field: 'coverage', label: 'Data received', unit: '%', numeric: true, source: 'calculated', metricId: 'data_coverage_pct' },
   { field: 'lastSeen', label: 'Last data', source: 'calculated', metricId: 'last_seen_at' },
   { field: 'warnings', label: 'Open warnings' },
 ];
@@ -106,7 +106,7 @@ export function BatteryTable({ settings }: { settings: Settings }) {
           />
         </label>
         <p className="text-xs leading-4 text-cds-text-secondary">
-          Coverage: last {settings.coveragePeriodDays} days (example setting)
+          Data received: last {settings.coveragePeriodDays} days (example setting)
         </p>
       </div>
 
@@ -173,7 +173,7 @@ export function BatteryTable({ settings }: { settings: Settings }) {
                         {!r.hasBirthRecord ? (
                           <span className="inline-flex items-center gap-1 text-xs text-cds-text-secondary">
                             <FileWarning aria-hidden="true" className="h-3.5 w-3.5" />
-                            No birth record
+                            No factory record
                           </span>
                         ) : null}
                       </div>
@@ -219,7 +219,7 @@ export function BatteryTable({ settings }: { settings: Settings }) {
                     </p>
                     {!r.hasBirthRecord ? (
                       <p className="mt-1 inline-flex items-center gap-1 text-xs text-cds-text-secondary">
-                        <FileWarning aria-hidden="true" className="h-3.5 w-3.5" /> No birth record
+                        <FileWarning aria-hidden="true" className="h-3.5 w-3.5" /> No factory record
                       </p>
                     ) : null}
                   </div>
@@ -227,15 +227,15 @@ export function BatteryTable({ settings }: { settings: Settings }) {
                 </div>
                 <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
                   <div>
-                    <dt className="text-xs leading-4 text-cds-text-secondary">Health, reported by BMS</dt>
+                    <dt className="text-xs leading-4 text-cds-text-secondary">Health (reported by BMS)</dt>
                     <dd className="tnum">{r.sohReportedPct === null ? <NotRecorded /> : `${num(r.sohReportedPct, 1)}%`}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs leading-4 text-cds-text-secondary">Cycles, reported by BMS</dt>
+                    <dt className="text-xs leading-4 text-cds-text-secondary">Cycles (reported by BMS)</dt>
                     <dd className="tnum">{r.cyclesReported === null ? <NotRecorded /> : num(r.cyclesReported)}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs leading-4 text-cds-text-secondary">Data coverage, calculated</dt>
+                    <dt className="text-xs leading-4 text-cds-text-secondary">Data received, worked out by us</dt>
                     <dd className="tnum">{r.coveragePct === null ? <NotRecorded /> : `${num(r.coveragePct, 1)}%`}</dd>
                   </div>
                   <div>

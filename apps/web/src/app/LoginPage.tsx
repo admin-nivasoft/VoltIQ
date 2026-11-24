@@ -4,10 +4,9 @@ import { LoadingState } from '../components/ui/states';
 
 // The switcher is imported only when the build says so. Vite replaces the literal at build time, so
 // with VITE_MOCK_AUTH anything but "true" this branch, and the whole dev module, is dropped (D-08).
+// The demo build has its own sign-in (src/demo/app/SignIn.tsx) and never renders this page.
 const DevLoginSwitcher =
-  import.meta.env.VITE_MOCK_AUTH === 'true' || import.meta.env.VITE_DEMO === 'true'
-    ? lazy(() => import('../features/dev/DevLoginSwitcher'))
-    : null;
+  import.meta.env.VITE_MOCK_AUTH === 'true' ? lazy(() => import('../features/dev/DevLoginSwitcher')) : null;
 
 export function LoginView({ switcher }: { switcher: ReactNode | null }) {
   return (
@@ -28,7 +27,7 @@ export function LoginPage() {
       switcher={
         DevLoginSwitcher ? (
           <Suspense fallback={<LoadingState label="Loading sign-in options" />}>
-            <DevLoginSwitcher demo={import.meta.env.VITE_DEMO === 'true'} />
+            <DevLoginSwitcher />
           </Suspense>
         ) : null
       }

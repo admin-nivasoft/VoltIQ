@@ -70,7 +70,7 @@ Cell, supplier and lot data are captured now. Comparing across them is Later (M3
 | M2.6 | Usage profile: depth of discharge, charge rates, temperature exposure | Should |
 | M2.7 | Record where each battery is deployed and who holds it, with history (deployment; new ID) | Should |
 | M2.8 | Data coverage per battery: share of expected data received, gaps (new ID) | Must |
-| M2.9 | Health (SoH) per battery, with trend history (new ID) | Must |
+| M2.9 | Health (reported by BMS, `soh_reported_pct`) per battery, with trend history (new ID); calculated `soh_pct` is Later | Must |
 | M2.10 | Rule-based warnings: high temperature, cell imbalance, low or falling health, repeated faults, no data (new ID) | Must |
 
 Admin duties (users, roles, audit, warning rules) are proposed for the first release through SCR-07, to confirm. Their old M7 IDs are listed under Later.
@@ -99,7 +99,7 @@ Labels follow the data-model source values (display names in brackets):
 - **calculated** (Calc): calculated by us. It names its method and version.
 - **registered** (Reg): entered or loaded from factory or dispatch records (for example rated capacity, build date).
 
-Some figures may be either, for example SoH and cycles: BMS if the BMS sends it, Calc if not. The screen says which applies to that battery.
+Health and cycles are split into two separate figures, each with its own source. "Health (reported by BMS)" (`soh_reported_pct`) and "Cycles (reported by BMS)" (`cycle_count_reported`) have source BMS, are stored in silver and are never copied into gold. Calculated `soh_pct` and `cycle_count` have source Calc, live in gold, method `[__]`, and are not computed in the first release. The serving layer joins silver and gold, and every field carries its own source. The soh_low rule uses `soh_reported_pct` in the first release.
 
 ### Data layers
 
@@ -216,7 +216,7 @@ Dependencies between phases:
 | Factory ID and BMS ID do not match | The join breaks; no passport view of field data | Define ID matching rules early; list unmatched records; fix at source |
 | Cell-level traceability not recorded today | Birth record only to battery or lot level | Start at battery and lot level; record cells where available |
 | BMS data gaps or poor quality | Weak health figures, false warnings | Quality checks, coverage per battery, tune thresholds with the manufacturer |
-| BMS does not send SoH, SoC or cycles | Figures must be calculated, and method is unproven | Show the source label; validate against reference tests `[__]` |
+| BMS does not send SoH, SoC or cycles | Health and cycles show "not recorded" until calculated SoH and cycles exist (method `[__]`, not in the first release); soh_low cannot fire | Show the source label; validate against reference tests `[__]` |
 | Too little history for models | Low accuracy | Rule-based first; ML is Later |
 | Warning fatigue | Users ignore real warnings | Severity levels; tune thresholds `[__]` |
 | Data use not allowed by contract | No field data from customers' batteries | Confirm contracts before connecting |

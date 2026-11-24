@@ -7,7 +7,9 @@ import { cn } from '../../lib/cn';
  */
 export const Tile = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('bg-cds-layer p-4', className)} {...props} />
+    // min-w-0: inside a grid or flex row a tile may shrink below its content's width (its own tables
+    // and charts scroll or reflow), so a wide child never pushes the page sideways on a phone.
+    <div ref={ref} className={cn('min-w-0 bg-cds-layer p-4', className)} {...props} />
   ),
 );
 Tile.displayName = 'Tile';

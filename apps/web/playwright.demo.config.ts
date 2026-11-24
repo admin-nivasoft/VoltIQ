@@ -11,7 +11,8 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   timeout: 45_000,
-  expect: { timeout: 10_000 },
+  // The dev server compiles the demo app on first request; slow machines need more than 10 s.
+  expect: { timeout: 20_000 },
   reporter: [['list']],
   use: { baseURL: 'http://127.0.0.1:5174', trace: 'retain-on-failure' },
   projects: [{ name: 'chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' } }],
