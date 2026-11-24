@@ -14,7 +14,7 @@ Updated: 2026-11-23. Pass: docs-first, **complete** (both fix rounds used). No c
 
 ## Open findings from the final review (not fixed)
 Major:
-1. `data-dictionary.md:263` allows `health_result.source = calculated` only. `metrics.md:35-36`, `scope.md:102` and `requirements.md:62` allow `bms` or `calculated` for SoH and cycles. **Your call.**
+1. **Answered (user, 2026-11-23):** gold stays calculated-only. BMS-reported SoH and cycles live in silver (`soh_reported_pct`, `cycle_count_reported`, labelled "reported by BMS"); the serving layer joins silver and gold and every field carries its own source. `metrics.md` and `data-dictionary.md` updated; `scope.md:102` and `requirements.md:62` still say "bms or calculated" and need the same split.
 2. `entities.md:57` data_coverage key lacks `manufacturer_id`. Most tables use a bare uuid PK, and no composite tenant FK rule is stated. Fix: add one rule (tenant-composite FKs) or add `manufacturer_id` to every key. Lead's recommendation: one stated rule plus composite FKs (safer for isolation).
 3. SCR-07 is confirmed, but `scope.md:76,147` and `requirements.md:85` still say its duties are "proposed". Pending your answers on the line-11 list.
 

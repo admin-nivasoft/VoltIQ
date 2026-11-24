@@ -1,0 +1,72 @@
+/*
+ * Carbon-themed tokens for the BPTE screens (White theme).
+ * Checked against carbondesignsystem.com (Nov 2026): background, layers, borders, text, interactive,
+ * focus and support colours, the 8px-based spacing scale and the 48px shell header.
+ * Hover, selected and notification-background steps are Carbon's published values but were not part
+ * of that check.
+ */
+@import '@fontsource/ibm-plex-sans/latin-400.css';
+@import '@fontsource/ibm-plex-sans/latin-600.css';
+
+:root {
+  --cds-background: #ffffff;
+  --cds-layer-01: #f4f4f4; /* Gray 10 */
+  --cds-layer-02: #ffffff;
+  --cds-layer-hover: #e8e8e8;
+  --cds-layer-selected: #e0e0e0;
+  --cds-border-subtle: #e0e0e0; /* Gray 20 */
+  --cds-border-strong: #8d8d8d; /* Gray 50 */
+  --cds-text-primary: #161616; /* Gray 100 */
+  --cds-text-secondary: #525252; /* Gray 70 */
+  --cds-text-helper: #6f6f6f; /* Gray 60 */
+  --cds-text-on-color: #ffffff;
+  --cds-interactive: #0f62fe; /* Blue 60 */
+  --cds-interactive-hover: #0050e6;
+  --cds-focus: #0f62fe;
+  --cds-shell-bg: #161616;
+  --cds-shell-text: #f4f4f4;
+  --cds-shell-hover: #2c2c2c;
+  --cds-support-error: #da1e28; /* Red 60 */
+  --cds-support-warning: #f1c21b; /* Yellow 30 */
+  --cds-support-success: #24a148; /* Green 50 */
+  --cds-support-info: #0043ce; /* Blue 70 */
+  --cds-notification-error-bg: #fff1f1;
+  --cds-notification-warning-bg: #fcf4d6;
+  --cds-notification-success-bg: #defbe6;
+  --cds-notification-info-bg: #edf5ff;
+  /* Single-series chart fill: the one blue accent. */
+  --cds-data-1: #0f62fe;
+}
+
+.bpte {
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 14px; /* body-compact-01 */
+  line-height: 18px;
+  letter-spacing: 0.16px;
+  color: var(--cds-text-primary);
+  background: var(--cds-background);
+}
+
+/* Tabular figures for every number column and figure, without adding Plex Mono. */
+.bpte .tnum {
+  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Carbon focus: a visible 2px ring, inset so it is never clipped by an overflow container. */
+.bpte :focus-visible {
+  outline: 2px solid var(--cds-focus);
+  outline-offset: -2px;
+}
+.bpte [data-shell] :focus-visible {
+  outline-color: #ffffff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bpte *,
+  .bpte *::before,
+  .bpte *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

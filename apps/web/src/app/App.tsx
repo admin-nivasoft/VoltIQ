@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { useState, type ReactNode } from 'react';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { BrowserRouter, Link, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { DemoBanner } from '../components/DemoBanner';
 import { PageHeading } from '../components/ui/PageHeading';
@@ -97,13 +97,29 @@ async function resetAndReload() {
   window.location.assign('/');
 }
 
+// Demo build only: the BPTE manufacturer mockup replaces the routes. Vite replaces the literal at build
+// time, so in any other build this import, and the whole demo app with its sample data, is dropped.
+const DemoApp = import.meta.env.VITE_DEMO === 'true' ? lazy(() => import('../demo/app/DemoApp')) : null;
+
 export default function App() {
   const [client] = useState(createQueryClient);
   return (
     <QueryClientProvider client={client}>
-      {import.meta.env.VITE_DEMO === 'true' ? <DemoBanner onReset={resetAndReload} /> : null}
+      {DemoApp ? <DemoBanner onReset={resetAndReload} /> : null}
       <BrowserRouter>
-        <AppRoutes />
+        {DemoApp ? (
+          <Suspense
+            fallback={
+              <ShellState>
+                <LoadingState label="Loading the demo" />
+              </ShellState>
+            }
+          >
+            <DemoApp />
+          </Suspense>
+        ) : (
+          <AppRoutes />
+        )}
       </BrowserRouter>
     </QueryClientProvider>
   );

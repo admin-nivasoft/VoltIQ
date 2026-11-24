@@ -1,90 +1,68 @@
 // A tiny in-browser stand-in for the API, used only when the app is built with VITE_DEMO=true.
-// It answers the same paths with the same shapes (the app still validates every response with the
-// shared contracts schemas) and applies the same permission rules from config/permissions.json.
+// It answers with demo-only shapes (src/demo/types.ts; the screens validate every response against
+// them) and applies the same rules the API must: the tenant (manufacturer) comes from the signed-in
+// user only, every route checks a permission, another manufacturer's data is never reachable, and
+// figures are worked out from the per-battery records the way bpte/data-model/metrics.md defines them.
 // Nothing leaves the browser, and nothing is saved: a reload starts again.
 import {
-  NotificationChannelsPutSchema,
-  NotificationTestRequestSchema,
-  RolePolicyUpdateSchema,
-  type Alert,
-  type FleetSummary,
-  type Me,
-  type NotificationChannel,
-  type NotificationLogEntry,
-  type PackSummary,
-} from '@ql/contracts';
-import policy from '../../../../config/permissions.json';
-import {
-  buildAlerts,
-  buildPacks,
-  CONSUMERS,
-  MANUFACTURER,
+  BATTERY_COUNT,
+  buildBatteries,
+  buildFreshness,
+  buildUnmatched,
+  EXAMPLE_SETTINGS,
+  MANUFACTURERS,
+  RULE_LIMITS,
   USERS,
-  type DemoConsumer,
+  type DemoBattery,
+  type DemoManufacturer,
+  type DemoUnmatched,
   type DemoUser,
 } from './data';
+import { METRICS } from './metrics';
+import { DEMO_POLICY } from './roles';
+import type {
+  Basis,
+  BatteryRef,
+  BatteryRow,
+  DemoMe,
+  DemoPermission,
+  Distribution,
+  FleetOverview,
+  OpenWarning,
+  Severity,
+} from './types';
 
 const STORAGE_KEY = 'ql-demo-user';
-let latencyMs = 120; // enough to see loading states, not enough to be annoying
+let latencyMs = 250; // long enough to show the loading skeletons, short enough not to annoy
 /** Tests turn the artificial delay off. */
 export const setDemoLatency = (ms: number) => {
   latencyMs = ms;
 };
-const NEAR_EOL_MONTHS = 6;
 
 interface Tenant {
-  consumer: DemoConsumer;
-  packs: PackSummary[];
-  alerts: Alert[];
+  manufacturer: DemoManufacturer;
+  batteries: DemoBattery[];
+  unmatched: DemoUnmatched[];
+  freshness: ReturnType<typeof buildFreshness>;
+  now: number;
 }
 let tenants: Map<string, Tenant> | null = null;
 let currentUserId: string | null | undefined;
 
-// Settings state, all in memory (reset with the rest of the demo).
-const channelsByUser = new Map<string, NotificationChannel[]>();
-const logByConsumer = new Map<string, NotificationLogEntry[]>();
-let policyState = freshPolicy();
-
-function freshPolicy() {
-  return { version: 1, roles: structuredClone(policy.roles) as Record<string, string[]> };
-}
-
-function seedLog(consumerId: string): NotificationLogEntry[] {
-  const now = Date.now();
-  const e = (n: number, over: Partial<NotificationLogEntry>): NotificationLogEntry => ({
-    // The first character differs per company (a, b, c), so ids never repeat across companies.
-    id: `5${consumerId[0]}000000-0000-4000-9000-${String(n).padStart(12, '0')}`,
-    alertId: null,
-    kind: 'alert',
-    channel: 'email',
-    status: 'sent',
-    attempt: 1,
-    error: null,
-    at: new Date(now - n * 3_600_000).toISOString(),
-    ...over,
-  });
-  return [
-    e(1, { kind: 'test' }),
-    e(5, { channel: 'webhook', status: 'failed', attempt: 3, error: 'mock_delivery_failed' }),
-    e(6, { channel: 'webhook', status: 'failed', attempt: 2, error: 'mock_delivery_failed' }),
-    e(7, { channel: 'webhook', status: 'failed', attempt: 1, error: 'mock_delivery_failed' }),
-    e(30, { channel: 'sms' }),
-    e(31, { channel: 'email' }),
-  ];
-}
-function logFor(consumerId: string): NotificationLogEntry[] {
-  let l = logByConsumer.get(consumerId);
-  if (!l) logByConsumer.set(consumerId, (l = seedLog(consumerId)));
-  return l;
-}
-
 function world(): Map<string, Tenant> {
   if (!tenants) {
+    const now = Date.now();
     tenants = new Map(
-      CONSUMERS.map((c) => {
-        const packs = buildPacks(c);
-        return [c.id, { consumer: c, packs, alerts: buildAlerts(c, packs) }];
-      }),
+      MANUFACTURERS.map((m) => [
+        m.id,
+        {
+          manufacturer: m,
+          batteries: buildBatteries(m, now, BATTERY_COUNT[m.id] ?? 0),
+          unmatched: buildUnmatched(m, now),
+          freshness: buildFreshness(now),
+          now,
+        },
+      ]),
     );
   }
   return tenants;
@@ -113,9 +91,6 @@ function writeUser(id: string | null) {
 /** Forgets the demo user and every change made, then lets the caller reload. */
 export function resetDemo(): void {
   tenants = null;
-  channelsByUser.clear();
-  logByConsumer.clear();
-  policyState = freshPolicy();
   writeUser(null);
 }
 
@@ -127,77 +102,281 @@ const reply = (status: number, body?: unknown) =>
 const fail = (status: number, code: string, message: string) =>
   reply(status, { error: { code, message } });
 
-const permissionsOf = (u: DemoUser): string[] => policyState.roles[u.role] ?? [];
-
 function intParam(url: URL, name: string, def: number, min: number, max: number): number | null {
   const raw = url.searchParams.get(name);
   if (raw === null || raw === '') return def;
   const n = Number(raw);
   return Number.isInteger(n) && n >= min && n <= max ? n : null;
 }
-function sortParam<F extends string>(
-  url: URL,
-  allowed: readonly F[],
-  def: { field: F; dir: 'asc' | 'desc' },
-) {
-  const raw = url.searchParams.get('sort');
-  if (raw === null) return def;
-  const [field, dir = 'asc', extra] = raw.split(':');
-  const match = allowed.find((a) => a === field);
-  if (extra !== undefined || !match || (dir !== 'asc' && dir !== 'desc')) return null;
-  return { field: match, dir };
-}
-const paged = <T>(items: T[], page: number, pageSize: number) => ({
-  items: items.slice((page - 1) * pageSize, page * pageSize),
-  total: items.length,
-  page,
-  pageSize,
-  asOf: new Date().toISOString(),
+
+// ---------------------------------------------------------------- calculations (metrics.md v1)
+
+const HOUR = 3_600_000;
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const pct = (num: number, den: number) => (den === 0 ? null : Math.round((num / den) * 1000) / 10);
+const ref = (b: DemoBattery): BatteryRef => ({
+  batteryId: b.id,
+  factorySerial: b.factorySerial,
+  bmsId: b.bmsId,
 });
+const hoursSince = (t: Tenant, at: string | null) =>
+  at === null ? null : (t.now - Date.parse(at)) / HOUR;
 
-const WARRANTY_RANK = { expired: 0, expiring: 1, active: 2 } as const;
-const SEVERITY_RANK = { high: 0, medium: 1, low: 2 } as const;
-const STATUS_RANK = { open: 0, acknowledged: 1, resolved: 2 } as const;
+function median(sorted: number[]): number | null {
+  if (!sorted.length) return null;
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
+}
 
-function meFor(u: DemoUser): Me {
-  const c = CONSUMERS.find((x) => x.id === u.consumerId);
+function distribution(
+  t: Tenant,
+  metricId: string,
+  values: (number | null)[],
+  band: number,
+  describe: (n: number, total: number) => string,
+  caveats: string[],
+): Distribution {
+  const have = values.filter((v): v is number => v !== null).sort((a, b) => a - b);
+  const excluded = values.length - have.length;
+  const bands: Distribution['bands'] = [];
+  if (have.length) {
+    const start = Math.floor(have[0]! / band) * band;
+    for (let from = start; from <= have[have.length - 1]!; from += band) {
+      bands.push({ from, to: from + band, count: have.filter((v) => v >= from && v < from + band).length });
+    }
+  }
+  const mean = have.length ? Math.round((have.reduce((a, b) => a + b, 0) / have.length) * 10) / 10 : null;
+  return {
+    n: have.length,
+    excluded,
+    min: have[0] ?? null,
+    median: median(have),
+    max: have[have.length - 1] ?? null,
+    mean,
+    bands,
+    basis: {
+      metricId,
+      calculatedAt: t.freshness.calculations,
+      basedOn: describe(have.length, values.length),
+      caveats: [
+        ...(excluded
+          ? [`${plural(excluded, 'battery', 'batteries')} with no reported value ${excluded === 1 ? 'is' : 'are'} left out.`]
+          : []),
+        ...caveats,
+      ],
+    },
+  };
+}
+
+const SEVERITY_RANK: Record<Severity, number> = { high: 0, medium: 1, low: 2 };
+
+/** Runs the example rules over each battery's latest values. One warning per rule per battery. */
+function openWarnings(t: Tenant): OpenWarning[] {
+  const rule = (id: string) => EXAMPLE_SETTINGS.rules.find((r) => r.ruleId === id)!;
+  const out: OpenWarning[] = [];
+  t.batteries.forEach((b, i) => {
+    const raise = (ruleId: string, observed: string | null, hoursAgo: number) => {
+      const r = rule(ruleId);
+      out.push({
+        warningId: `${b.id.slice(0, 1)}5${String(out.length + 1).padStart(6, '0')}-0000-4000-9000-${String(i + 1).padStart(12, '0')}`,
+        battery: ref(b),
+        ruleId,
+        condition: r.condition,
+        severity: r.severity,
+        observed,
+        detectedAt: new Date(t.now - hoursAgo * HOUR).toISOString(),
+      });
+    };
+    if (b.calc.maxTempC !== null && b.calc.maxTempC > RULE_LIMITS.tempC)
+      raise('high_temp', `${b.calc.maxTempC.toFixed(1)} °C`, 3.2);
+    if (b.calc.spreadMv !== null && b.calc.spreadMv > RULE_LIMITS.spreadMv)
+      raise('cell_imbalance', `${b.calc.spreadMv} mV`, 19);
+    const silent = hoursSince(t, b.calc.lastSeenAt);
+    if (silent !== null && silent > RULE_LIMITS.noDataHours)
+      raise('no_data', `Last data ${Math.round(silent)} h ago`, silent - RULE_LIMITS.noDataHours);
+    if (b.reported.sohPct !== null && b.reported.sohPct < RULE_LIMITS.sohPct)
+      raise('soh_low', `${b.reported.sohPct.toFixed(1)}%`, 52 + i);
+  });
+  return out.sort(
+    (a, b) =>
+      SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] || b.detectedAt.localeCompare(a.detectedAt),
+  );
+}
+
+function overview(t: Tenant): FleetOverview {
+  const s = EXAMPLE_SETTINGS;
+  const bs = t.batteries;
+  const N = bs.length;
+  const calcAt = t.freshness.calculations;
+  const basis = (metricId: string, basedOn: string, caveats: string[] = []): Basis => ({
+    metricId,
+    calculatedAt: calcAt,
+    basedOn,
+    caveats,
+  });
+
+  const noBirth = bs.filter((b) => b.birth === null);
+  const neverReported = bs.filter((b) => b.calc.lastSeenAt === null);
+  const reporting = bs.filter((b) => {
+    const hrs = hoursSince(t, b.calc.lastSeenAt);
+    return hrs !== null && hrs <= s.reportingWindowHours;
+  });
+  const deployed = bs.filter((b) => b.calc.expected > 0);
+  const received = deployed.reduce((a, b) => a + b.calc.received, 0);
+  const expected = deployed.reduce((a, b) => a + b.calc.expected, 0);
+  const gapRows = deployed
+    .map((b) => ({ b, cov: pct(b.calc.received, b.calc.expected) ?? 0 }))
+    .filter(({ b, cov }) => cov < s.gapCoverageBelowPct || b.calc.longestGapHours > s.gapLongerThanHours)
+    .sort((x, y) => x.cov - y.cov);
+  const warnings = openWarnings(t);
+  const bySeverity = { high: 0, medium: 0, low: 0 };
+  warnings.forEach((w) => (bySeverity[w.severity] += 1));
+  const stale = bs.filter((b) => {
+    const hrs = hoursSince(t, b.calc.lastSeenAt);
+    return b.reported.sohPct !== null && hrs !== null && hrs > s.reportingWindowHours;
+  });
+  const staleNote = stale.length
+    ? [`${plural(stale.length, 'battery', 'batteries')} stopped reporting, so ${stale.length === 1 ? 'its' : 'their'} latest value is older than ${s.reportingWindowHours} hours.`]
+    : [];
+  const neverNote = neverReported.length
+    ? [`${plural(neverReported.length, 'battery', 'batteries')} ${neverReported.length === 1 ? 'has' : 'have'} never reported, so no rule can look at ${neverReported.length === 1 ? 'it' : 'them'}.`]
+    : [];
+  const held = t.unmatched.reduce((a, u) => a + u.messagesHeld, 0);
+
+  return {
+    manufacturer: { id: t.manufacturer.id, name: t.manufacturer.name },
+    settings: s,
+    registered: {
+      value: N,
+      basis: basis(
+        'batteries_registered',
+        `${plural(N, 'battery record')}: ${N - noBirth.length} from birth records, ${noBirth.length} entered by an Admin.`,
+        noBirth.length
+          ? [`${plural(noBirth.length, 'battery', 'batteries')} ${noBirth.length === 1 ? 'has' : 'have'} no birth record, so build date, model and rated capacity are not recorded for ${noBirth.length === 1 ? 'it' : 'them'}.`]
+          : [],
+      ),
+    },
+    reporting: {
+      value: reporting.length,
+      basis: basis(
+        'batteries_reporting',
+        `Last message time of ${plural(N, 'battery', 'batteries')}, against a ${s.reportingWindowHours}-hour window (example setting).`,
+        neverReported.length
+          ? [`${plural(neverReported.length, 'battery', 'batteries')} ${neverReported.length === 1 ? 'has' : 'have'} never reported: no deployment is recorded.`]
+          : [],
+      ),
+    },
+    noBirthRecord: {
+      value: noBirth.length,
+      batteries: noBirth.map(ref),
+      basis: basis('batteries_no_birth_record', `Battery records compared with birth records for all ${N} batteries.`),
+    },
+    health: distribution(
+      t,
+      'fleet_soh_reported_distribution',
+      bs.map((b) => b.reported.sohPct),
+      s.healthBandPct,
+      (n, total) => `Latest reported value from ${n} of ${total} batteries. Bands of ${s.healthBandPct} percentage points (example setting).`,
+      [
+        ...staleNote,
+        'These are the BMS’s own figures. We do not calculate health yet, so they have not been checked against capacity tests.',
+      ],
+    ),
+    cycles: distribution(
+      t,
+      'fleet_cycle_count_distribution',
+      bs.map((b) => b.reported.cycles),
+      s.cycleBand,
+      (n, total) => `Latest reported counter from ${n} of ${total} batteries. Bands of ${s.cycleBand} cycles (example setting).`,
+      [...staleNote, 'These are the BMS’s own counts. We do not calculate cycles yet.'],
+    ),
+    coverage: {
+      pct: pct(received, expected),
+      received,
+      expected,
+      basis: basis(
+        'fleet_data_coverage_pct',
+        `${received.toLocaleString('en-GB')} of ${expected.toLocaleString('en-GB')} expected messages from ${plural(deployed.length, 'deployed battery', 'deployed batteries')} over the last ${s.coveragePeriodDays} days, at one message every ${s.sendIntervalMinutes} minutes (example settings).`,
+        bs.length > deployed.length
+          ? [`${plural(bs.length - deployed.length, 'battery', 'batteries')} ${bs.length - deployed.length === 1 ? 'has' : 'have'} no deployment recorded, so nothing is expected and ${bs.length - deployed.length === 1 ? 'it is' : 'they are'} left out.`]
+          : [],
+      ),
+    },
+    gaps: {
+      value: gapRows.length,
+      batteries: gapRows.map(({ b, cov }) => ({
+        battery: ref(b),
+        coveragePct: cov,
+        longestGapHours: b.calc.longestGapHours,
+        lastSeenAt: b.calc.lastSeenAt,
+      })),
+      basis: basis(
+        'batteries_with_gaps',
+        `Coverage and longest silence of ${plural(deployed.length, 'deployed battery', 'deployed batteries')} over the last ${s.coveragePeriodDays} days. Limits: coverage below ${s.gapCoverageBelowPct}% or a gap longer than ${s.gapLongerThanHours} hours (example settings).`,
+      ),
+    },
+    unmatched: {
+      value: t.unmatched.length,
+      ids: t.unmatched.map((u) => ({
+        unmatchedId: u.id,
+        idType: 'bms_id' as const,
+        idValue: u.idValue,
+        firstSeenAt: u.firstSeenAt,
+        lastSeenAt: u.lastSeenAt,
+        messagesHeld: u.messagesHeld,
+      })),
+      basis: basis(
+        'unmatched_id_count',
+        `${plural(t.unmatched.length, 'BMS ID')} with ${held.toLocaleString('en-GB')} messages held.`,
+        held ? ['Held data is in no figure on this page until the ID is linked to a battery.'] : [],
+      ),
+    },
+    warnings: {
+      bySeverity,
+      open: warnings,
+      basis: basis(
+        'open_warnings_by_severity',
+        `${plural(s.rules.length, 'rule')} (example settings) run over the latest calculations for ${plural(N, 'battery', 'batteries')}.`,
+        [...neverNote, 'The health-trend rule is not active: its method is not confirmed yet.'],
+      ),
+    },
+    updated: t.freshness,
+    asOf: new Date().toISOString(),
+  };
+}
+
+function batteryRows(t: Tenant): BatteryRow[] {
+  const warnings = openWarnings(t);
+  return t.batteries.map((b) => {
+    const mine = warnings.filter((w) => w.battery.batteryId === b.id);
+    return {
+      battery: ref(b),
+      model: b.birth?.model ?? null,
+      holder: b.deployment?.holder ?? null,
+      site: b.deployment?.site ?? null,
+      sohReportedPct: b.reported.sohPct,
+      cyclesReported: b.reported.cycles,
+      coveragePct: pct(b.calc.received, b.calc.expected),
+      lastSeenAt: b.calc.lastSeenAt,
+      openWarnings: mine.length,
+      worstSeverity: mine[0]?.severity ?? null,
+      hasBirthRecord: b.birth !== null,
+    };
+  });
+}
+
+const BATTERY_SORTS = ['serial', 'soh', 'cycles', 'coverage', 'lastSeen', 'warnings'] as const;
+
+// ---------------------------------------------------------------- routes
+
+function meFor(u: DemoUser): DemoMe {
+  const m = MANUFACTURERS.find((x) => x.id === u.manufacturerId)!;
   return {
     user: { id: u.id, name: u.name, role: u.role },
-    consumer: c ? { id: c.id, name: c.name, type: c.type } : null,
-    manufacturer: c ? MANUFACTURER : null,
-    permissions: permissionsOf(u) as Me['permissions'],
+    manufacturer: { id: m.id, name: m.name },
+    permissions: DEMO_POLICY[u.role],
     asOf: new Date().toISOString(),
   };
-}
-
-function summaryFor(t: Tenant): FleetSummary {
-  const inService = t.packs.filter((p) => p.status === 'in_service');
-  const sohs = inService.flatMap((p) => (p.sohPct === null ? [] : [p.sohPct]));
-  return {
-    packsInService: inService.length,
-    averageSohPct: sohs.length
-      ? Math.round((sohs.reduce((a, b) => a + b, 0) / sohs.length) * 10) / 10
-      : null,
-    activeAlerts: t.alerts.filter((a) => a.status === 'open').length,
-    packsNearingEol: inService.filter(
-      (p) => p.remainingLife && p.remainingLife.monthsLow < NEAR_EOL_MONTHS,
-    ).length,
-    asOf: new Date().toISOString(),
-  };
-}
-
-/** Fleet managers start with one email channel, so the form is not empty on first look. */
-function defaultChannels(u: DemoUser): NotificationChannel[] {
-  return u.role === 'fleet_manager'
-    ? [
-        {
-          id: crypto.randomUUID(),
-          type: 'email',
-          target: `${u.name.toLowerCase().replace(/[^a-z]+/g, '.')}@example.test`,
-          enabled: true,
-        },
-      ]
-    : [];
 }
 
 function route(method: string, path: string, body: unknown): Response {
@@ -219,198 +398,63 @@ function route(method: string, path: string, body: unknown): Response {
   if (!user) return fail(401, 'unauthenticated', 'Sign in required');
   if (method === 'GET' && p === '/me') return reply(200, meFor(user));
 
-  const need = (permission: string) =>
-    permissionsOf(user).includes(permission) ? null : fail(403, 'forbidden', 'Missing permission');
-  const tenant = user.consumerId ? world().get(user.consumerId) : undefined;
+  const need = (permission: DemoPermission) =>
+    DEMO_POLICY[user.role].includes(permission) ? null : fail(403, 'forbidden', 'Missing permission');
+  // The tenant is the signed-in user's manufacturer. Nothing in the path, query or body can change it.
+  const tenant = world().get(user.manufacturerId)!;
 
-  if (method === 'GET' && p === '/fleet/summary') {
-    return (
-      need('fleet.view') ??
-      (tenant ? reply(200, summaryFor(tenant)) : fail(403, 'forbidden', 'No fleet'))
-    );
+  if (method === 'GET' && p === '/metrics') {
+    return need('fleet.view') ?? reply(200, { items: METRICS, asOf: new Date().toISOString() });
   }
 
-  if (method === 'GET' && p === '/packs') {
-    const denied = need('packs.view');
+  if (method === 'GET' && p === '/fleet/overview') {
+    return need('fleet.view') ?? reply(200, overview(tenant));
+  }
+
+  if (method === 'GET' && p === '/batteries') {
+    const denied = need('batteries.view');
     if (denied) return denied;
-    if (!tenant) return fail(403, 'forbidden', 'No fleet');
     const page = intParam(url, 'page', 1, 1, 100_000);
     const size = intParam(url, 'pageSize', 25, 1, 100);
-    const sort = sortParam(
-      url,
-      ['serial', 'sohPct', 'trend', 'remainingLife', 'warrantyStatus'] as const,
-      { field: 'serial', dir: 'asc' },
-    );
-    const q = (url.searchParams.get('q') ?? '').trim();
-    if (page === null || size === null || !sort || q.length > 100)
+    const [field, dir = 'asc', extra] = (url.searchParams.get('sort') ?? 'serial:asc').split(':');
+    const sortField = BATTERY_SORTS.find((f) => f === field);
+    const q = (url.searchParams.get('q') ?? '').trim().toLowerCase();
+    if (page === null || size === null || !sortField || extra !== undefined || (dir !== 'asc' && dir !== 'desc') || q.length > 100)
       return fail(400, 'validation_failed', 'The request is invalid');
-    const needle = q.toLowerCase();
-    const key = (x: PackSummary): string | number | null =>
+    const key = (r: BatteryRow): string | number | null =>
       ({
-        serial: x.serial,
-        sohPct: x.sohPct,
-        trend: x.trend.pointsPer30Days,
-        remainingLife: x.remainingLife?.monthsLow ?? null,
-        warrantyStatus: WARRANTY_RANK[x.warrantyStatus],
-      })[sort.field];
-    const sign = sort.dir === 'asc' ? 1 : -1;
-    const rows = tenant.packs
+        serial: r.battery.factorySerial,
+        soh: r.sohReportedPct,
+        cycles: r.cyclesReported,
+        coverage: r.coveragePct,
+        lastSeen: r.lastSeenAt,
+        warnings: r.openWarnings ? r.openWarnings * 10 + (2 - SEVERITY_RANK[r.worstSeverity!]) : 0,
+      })[sortField];
+    const sign = dir === 'asc' ? 1 : -1;
+    const rows = batteryRows(tenant)
       .filter(
-        (x) =>
-          !needle ||
-          [x.serial, x.assetId ?? '', x.spec].some((s) => s.toLowerCase().includes(needle)),
+        (r) =>
+          !q ||
+          [r.battery.factorySerial, r.battery.bmsId, r.holder, r.site, r.model].some((v) =>
+            (v ?? '').toLowerCase().includes(q),
+          ),
       )
       .sort((a, b) => {
         const x = key(a);
         const y = key(b);
-        if (x === null && y === null) return a.serial < b.serial ? -1 : 1;
-        if (x === null) return 1;
+        const tie = (a.battery.factorySerial ?? '').localeCompare(b.battery.factorySerial ?? '');
+        if (x === null && y === null) return tie;
+        if (x === null) return 1; // "not recorded" always last
         if (y === null) return -1;
-        return x !== y ? (x < y ? -1 : 1) * sign : a.serial < b.serial ? -1 : 1;
+        return x === y ? tie : (x < y ? -1 : 1) * sign;
       });
-    return reply(200, paged(rows, page, size));
-  }
-
-  if (method === 'GET' && p === '/alerts') {
-    const denied = need('alerts.view');
-    if (denied) return denied;
-    if (!tenant) return fail(403, 'forbidden', 'No fleet');
-    const page = intParam(url, 'page', 1, 1, 100_000);
-    const size = intParam(url, 'pageSize', 25, 1, 100);
-    const sort = sortParam(url, ['createdAt', 'severity', 'status'] as const, {
-      field: 'createdAt',
-      dir: 'desc',
-    });
-    const status = url.searchParams.get('status');
-    const severity = url.searchParams.get('severity');
-    const bad = (v: string | null, ok: readonly string[]) =>
-      v !== null && v !== '' && !ok.includes(v);
-    if (
-      page === null ||
-      size === null ||
-      !sort ||
-      bad(status, ['open', 'acknowledged', 'resolved']) ||
-      bad(severity, ['high', 'medium', 'low'])
-    ) {
-      return fail(400, 'validation_failed', 'The request is invalid');
-    }
-    const key = (a: Alert): string | number =>
-      ({
-        createdAt: a.createdAt,
-        severity: SEVERITY_RANK[a.severity],
-        status: STATUS_RANK[a.status],
-      })[sort.field];
-    const sign = sort.dir === 'asc' ? 1 : -1;
-    const rows = tenant.alerts
-      .filter((a) => (!status || a.status === status) && (!severity || a.severity === severity))
-      .sort(
-        (a, b) =>
-          (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : a.id < b.id ? -1 : 1) *
-          (key(a) === key(b) ? 1 : sign),
-      );
-    return reply(200, paged(rows, page, size));
-  }
-
-  // ---- Settings ----
-  if (p === '/notification-channels' && method === 'GET') {
-    return (
-      need('channels.manage_own') ??
-      reply(200, channelsByUser.get(user.id) ?? defaultChannels(user))
-    );
-  }
-  if (p === '/notification-channels' && method === 'PUT') {
-    const denied = need('channels.manage_own');
-    if (denied) return denied;
-    const parsed = NotificationChannelsPutSchema.safeParse(body);
-    if (!parsed.success) return fail(400, 'validation_failed', 'The request is invalid');
-    // The user is always the signed-in user: the body cannot name anyone else.
-    const next = parsed.data.channels.map((c) => ({
-      id: crypto.randomUUID(),
-      type: c.type,
-      target: c.target.trim(),
-      enabled: c.enabled,
-    }));
-    channelsByUser.set(user.id, next);
-    return reply(200, next);
-  }
-  if (p === '/notification-channels/test' && method === 'POST') {
-    const denied = need('channels.manage_own');
-    if (denied) return denied;
-    const req = NotificationTestRequestSchema.safeParse(body);
-    if (!req.success || !user.consumerId)
-      return fail(400, 'validation_failed', 'The request is invalid');
-    const channel = (channelsByUser.get(user.id) ?? defaultChannels(user)).find(
-      (c) => c.type === req.data.type,
-    );
-    if (!channel) return fail(404, 'not_found', 'Not found');
-    // Same rule as the sample delivery service: an address containing "fail" always fails.
-    const failed = channel.target.toLowerCase().includes('fail');
-    const at = new Date().toISOString();
-    logFor(user.consumerId).unshift({
-      id: crypto.randomUUID(),
-      alertId: null,
-      kind: 'test',
-      channel: channel.type,
-      status: failed ? 'failed' : 'sent',
-      attempt: 1,
-      error: failed ? 'mock_delivery_failed' : null,
-      at,
-    });
     return reply(200, {
-      channel: channel.type,
-      status: failed ? 'failed' : 'sent',
-      error: failed ? 'mock_delivery_failed' : null,
-      at,
-    });
-  }
-  if (p === '/notification-log' && method === 'GET') {
-    const denied = need('notifications.view_log');
-    if (denied) return denied;
-    if (!user.consumerId) return fail(403, 'forbidden', 'No fleet');
-    const page = intParam(url, 'page', 1, 1, 100_000);
-    const size = intParam(url, 'pageSize', 25, 1, 100);
-    if (page === null || size === null || url.searchParams.has('sort'))
-      return fail(400, 'validation_failed', 'The request is invalid');
-    return reply(200, paged(logFor(user.consumerId), page, size));
-  }
-  if (p === '/admin/permissions' && method === 'GET') {
-    return (
-      need('permissions.manage') ??
-      reply(200, {
-        policy: { version: policyState.version, roles: policyState.roles },
-        asOf: new Date().toISOString(),
-      })
-    );
-  }
-  if (p === '/admin/permissions' && method === 'PUT') {
-    const denied = need('permissions.manage');
-    if (denied) return denied;
-    const parsed = RolePolicyUpdateSchema.safeParse(body);
-    if (!parsed.success) return fail(400, 'validation_failed', 'The request is invalid');
-    policyState = {
-      version: policyState.version + 1,
-      roles: structuredClone(parsed.data.roles) as Record<string, string[]>,
-    };
-    return reply(200, {
-      policy: { version: policyState.version, roles: policyState.roles },
+      items: rows.slice((page - 1) * size, page * size),
+      total: rows.length,
+      page,
+      pageSize: size,
       asOf: new Date().toISOString(),
     });
-  }
-
-  const ack = method === 'POST' ? /^\/alerts\/([^/]+)\/acknowledge$/.exec(p) : null;
-  if (ack) {
-    const denied = need('alerts.acknowledge');
-    if (denied) return denied;
-    // Only this consumer's alerts are looked at, so another consumer's id is simply "not found".
-    const alert = tenant?.alerts.find((a) => a.id === ack[1]);
-    if (!alert) return fail(404, 'not_found', 'Not found');
-    if (alert.status === 'resolved') return fail(409, 'conflict', 'This alert is already resolved');
-    if (alert.status === 'open') {
-      alert.status = 'acknowledged';
-      alert.acknowledgedBy = user.name;
-      alert.acknowledgedAt = new Date().toISOString();
-    }
-    return reply(200, alert);
   }
 
   return fail(404, 'not_found', 'Not found');

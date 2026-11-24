@@ -260,7 +260,9 @@ cell_lot (E09)
 | calc_version_id | uuid | |
 | inputs_coverage | decimal | Share of expected input present |
 | signals | doc | Contributing inputs (NFR-09) |
-| source | calculated | |
+| source | calculated | Always. Gold is calculated-only |
+
+Gold holds only calculated values. BMS-reported values (e.g. `soh_reported_pct`, `cycle_count_reported` from telemetry_reading signals) stay in silver and are never copied into gold. The serving layer joins silver (reported) and gold (calculated); every field carries its own source. Calculated `soh_pct` and `cycle_count` are not computed in the first release (method `[__]`). Fleet aggregates (metrics.md, "Fleet aggregates") record their own calc_version_id.
 
 ### warning (E21)
 | Field | Type | Notes |
