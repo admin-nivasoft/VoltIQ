@@ -3,6 +3,6 @@
 export const DEMO_GROUP_NAME: Record<string, string> = {
   'Consumer A · OEM': 'Aurora Motors · vehicle maker',
   'Consumer B · ESS integrator': 'Meridian Storage Systems · energy storage',
-  'Consumer C · Fleet operator': 'Northgate Logistics · delivery fleet',
+  'Consumer C · Fleet operator': 'Northgate Logistics · delivery vehicles',
   Platform: 'Platform administration',
 };

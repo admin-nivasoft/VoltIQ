@@ -1,7 +1,7 @@
 // The demo has no settings screen of its own. What it has is the example settings (reporting window,
 // send interval, coverage period, rule limits) that the figures use, and the role permissions that
 // decide who may import and link. This suite covers both, and that the second manufacturer stays hidden.
-import { expect, goTo, signIn, test } from './fixtures';
+import { expect, goTo, openTab, signIn, test } from './fixtures';
 
 test('a battery manager sees no upload or link controls anywhere', async ({ page }) => {
   await signIn(page, 'Battery manager');
@@ -40,6 +40,7 @@ test('an admin has the controls the battery manager lacks', async ({ page }) => 
 
 test('a battery without a factory record offers the import link to an admin only', async ({ page }) => {
   const openNoBirthBattery = async () => {
+    await openTab(page, 'Data');
     await page
       .getByRole('region', { name: 'Data quality' })
       .getByRole('link', { name: /^LRB-/ })

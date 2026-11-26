@@ -40,7 +40,9 @@ describe('DemoBanner', () => {
   });
 });
 
-describe('App in a demo build', () => {
+// The first render lazy-loads the demo app chunk (now with the motion library); a cold load in a full
+// parallel run can pass 5 s, so this group gets 15 s.
+describe('App in a demo build', { timeout: 15_000 }, () => {
   it('shows the banner and the demo sign-in for Lumen Ridge only', async () => {
     render(<App />);
     expect(screen.getByRole('complementary', { name: 'Demo notice' })).toHaveTextContent(/sample data only/i);
@@ -59,10 +61,10 @@ describe('App in a demo build', () => {
     expect(screen.queryByText(/Aurora Motors|Meridian|Northgate|Development login/)).not.toBeInTheDocument();
   });
 
-  it('signing in as a battery manager opens the fleet overview, and the banner stays', async () => {
+  it('signing in as a battery manager opens the battery overview, and the banner stays', async () => {
     render(<App />);
     await userEvent.click(await screen.findByRole('button', { name: /Battery manager/ }, SLOW));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Fleet overview' }, SLOW)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Battery overview' }, SLOW)).toBeInTheDocument();
     expect(screen.getByText('Ananya Desai')).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Demo notice' })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Needs attention' }, SLOW)).toBeInTheDocument();

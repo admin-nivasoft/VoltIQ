@@ -50,7 +50,7 @@ function Count({ label, metricId, basis, value, sub, at }: { label: string; metr
         <TileLabel className="pt-1">{label}</TileLabel>
         <Working metricId={metricId} basis={basis} name={label} className="-mr-1 -mt-0.5" />
       </div>
-      <p className="tnum mt-2 text-[32px] leading-10">{num(value)}</p>
+      <p className="tnum mt-2 text-3xl font-semibold tracking-[-0.02em]">{num(value)}</p>
       <p className="mt-1 text-cds-text-secondary">{sub}</p>
       <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-4">
         <SourceTag source="calculated" />

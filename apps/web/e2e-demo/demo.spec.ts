@@ -5,6 +5,7 @@ import {
   expect,
   goTo,
   openFirstBattery,
+  openTab,
   scrollsSideways,
   signIn,
   test,
@@ -50,33 +51,37 @@ test('works with no server: the overview, its figures and the battery list load 
   page,
 }) => {
   await signIn(page, 'Battery manager');
-  await expect(page.getByRole('heading', { name: 'Fleet at a glance' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'At a glance' })).toBeVisible();
   await expect(page.getByText('Lumen Ridge Batteries · 48 batteries registered')).toBeVisible();
   await expect(page.getByText('Ananya Desai').first()).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Open warnings' })).toBeVisible();
   expect(await attentionCount(page, /open warnings?/)).toBe(5);
   expect(await attentionCount(page, NO_BIRTH)).toBe(2);
   expect(await attentionCount(page, UNMATCHED)).toBe(2);
+  await openTab(page, 'Warnings');
+  await expect(page.getByRole('heading', { name: 'Open warnings' })).toBeVisible();
+  await openTab(page, 'All batteries');
+  await expect(page.getByRole('heading', { name: 'All batteries' })).toBeVisible();
 });
 
 test('all four screens are reachable by clicking, and each has a way back', async ({ page }) => {
   await signIn(page, 'Battery manager');
-  // Fleet overview -> a battery -> back by the link on that page.
+  // Battery overview -> a battery -> back by the link on that page.
   const serial = await openFirstBattery(page);
   await expect(page).toHaveURL(/\/batteries\/[0-9a-f-]{36}$/);
-  await page.getByRole('link', { name: 'Fleet overview' }).first().click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Fleet overview' })).toBeVisible();
+  await page.getByRole('link', { name: 'Battery overview' }).first().click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Battery overview' })).toBeVisible();
   // The browser back button works too.
+  await openTab(page, 'All batteries');
   await page.getByRole('link', { name: serial, exact: true }).first().click();
   await expect(page.getByRole('heading', { level: 1, name: serial })).toBeVisible();
   await page.goBack();
-  await expect(page.getByRole('heading', { level: 1, name: 'Fleet overview' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Battery overview' })).toBeVisible();
   // The other two screens, from the main navigation, and back to the start.
   await goTo(page, 'Factory data import');
   await expect(page).toHaveURL(/\/imports$/);
   await goTo(page, 'Data connection');
   await expect(page).toHaveURL(/\/connection$/);
-  await goTo(page, 'Fleet overview');
+  await goTo(page, 'Battery overview');
   await expect(page).toHaveURL(/\/$/);
 });
 
@@ -87,20 +92,73 @@ test('a "needs attention" card leads on to the section it counts', async ({ page
     .getByRole('link')
     .filter({ hasText: UNMATCHED })
     .click();
-  await expect(page).toHaveURL(/#data-quality$/);
+  await expect(page).toHaveURL(/[?]tab=data#data-quality$/);
   await expect(page.getByRole('heading', { name: 'Unrecognised battery IDs' })).toBeVisible();
+});
+
+test('the other "needs attention" cards open the Warnings and Data tabs', async ({ page }) => {
+  await signIn(page, 'Battery manager');
+  const card = (t: RegExp) =>
+    page.getByRole('region', { name: 'Needs attention' }).getByRole('link').filter({ hasText: t });
+  await card(/open warnings?/).click();
+  await expect(page).toHaveURL(/[?]tab=warnings#warnings$/);
+  await expect(page.getByRole('heading', { name: 'Open warnings' })).toBeVisible();
+  await page.goBack();
+  await card(NO_BIRTH).click();
+  await expect(page).toHaveURL(/[?]tab=data#data-quality$/);
+});
+
+test('the overview tabs work with the keyboard and the URL', async ({ page }) => {
+  await signIn(page, 'Battery manager');
+  await expect(page.getByRole('tablist', { name: 'Battery overview sections' })).toBeVisible();
+  const tab = (n: string) => page.getByRole('tab', { name: new RegExp(`^${n}`) });
+  await tab('Summary').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(tab('Warnings')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('heading', { name: 'Open warnings' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'At a glance' })).toHaveCount(0);
+  await page.keyboard.press('End');
+  await expect(tab('All batteries')).toHaveAttribute('aria-selected', 'true');
+  await page.goto('/?tab=health');
+  await expect(tab('Health')).toHaveAttribute('aria-selected', 'true');
+});
+
+test('the theme toggle switches to dark, survives a reload, and dark has no axe violations', async ({
+  page,
+}) => {
+  await signIn(page, 'Battery manager');
+  await page.getByRole('button', { name: 'Switch to dark theme' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1, name: 'Battery overview' })).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.getByRole('button', { name: 'Switch to light theme' })).toBeVisible();
+  expect(await axeViolations(page)).toEqual([]);
+  await openFirstBattery(page);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  expect(await axeViolations(page)).toEqual([]);
+});
+
+test('the word "fleet" appears nowhere on screen', async ({ page }) => {
+  await signIn(page, 'Battery manager');
+  for (const t of ['Summary', 'Warnings', 'Health', 'Data', 'All batteries']) {
+    await openTab(page, t);
+    expect(await page.locator('body').innerText(), t).not.toMatch(/fleet/i);
+  }
+  await openFirstBattery(page);
+  expect(await page.locator('body').innerText()).not.toMatch(/fleet/i);
 });
 
 test('an unknown address says so and links back', async ({ page }) => {
   await signIn(page, 'Battery manager');
-  await page.getByRole('heading', { level: 1, name: 'Fleet overview' }).waitFor();
+  await page.getByRole('heading', { level: 1, name: 'Battery overview' }).waitFor();
   await page.evaluate(() => {
     window.history.pushState({}, '', '/no-such-page');
     window.dispatchEvent(new PopStateEvent('popstate'));
   });
   await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
-  await page.getByRole('link', { name: 'Back to the fleet overview' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Fleet overview' })).toBeVisible();
+  await page.getByRole('link', { name: 'Back to the battery overview' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Battery overview' })).toBeVisible();
 });
 
 test('a "how it is worked out" panel opens on keyboard focus, shows the formula, and closes on Escape', async ({
@@ -154,7 +212,7 @@ test('an admin import: checking changes nothing, importing resolves the 2 batter
   await expect(page.getByText('File imported')).toHaveCount(0);
 
   // Checking is not importing: the overview still shows the old counts.
-  await goTo(page, 'Fleet overview');
+  await goTo(page, 'Battery overview');
   expect(await attentionCount(page, NO_BIRTH)).toBe(2);
   expect(await attentionCount(page, UNMATCHED)).toBe(2);
 
@@ -165,7 +223,7 @@ test('an admin import: checking changes nothing, importing resolves the 2 batter
   await expect(page.getByText('File imported')).toBeVisible();
   await expect(page.getByText(/Resolved battery ID BMS-7F3A9C/)).toBeVisible();
 
-  await goTo(page, 'Fleet overview');
+  await goTo(page, 'Battery overview');
   await expect(page.getByText('Lumen Ridge Batteries · 50 batteries registered')).toBeVisible();
   expect(await attentionCount(page, NO_BIRTH)).toBeNull();
   expect(await attentionCount(page, UNMATCHED)).toBe(1);
@@ -189,7 +247,7 @@ test('an admin links an unrecognised battery ID: it leaves the list and the over
   await expect(section.getByText('BMS-7F3A9C', { exact: true })).toHaveCount(0);
   await expect(section.getByText('BMS-0B21D4').first()).toBeVisible();
 
-  await goTo(page, 'Fleet overview');
+  await goTo(page, 'Battery overview');
   expect(await attentionCount(page, UNMATCHED)).toBe(1);
   expect(await attentionCount(page, NO_BIRTH)).toBe(2);
 });
@@ -236,6 +294,15 @@ for (const width of WIDTHS) {
       expect(await axeViolations(page)).toEqual([]);
       expect(await scrollsSideways(page)).toBe(false);
     });
+
+    for (const t of ['Data', 'All batteries']) {
+      test(`overview, ${t} tab: no axe violations, no sideways scrolling`, async ({ page }) => {
+        await signIn(page, 'Admin');
+        await openTab(page, t);
+        expect(await axeViolations(page)).toEqual([]);
+        expect(await scrollsSideways(page)).toBe(false);
+      });
+    }
 
     test('a battery: no axe violations, no sideways scrolling', async ({ page }) => {
       await signIn(page, 'Admin');

@@ -29,7 +29,7 @@ function SectionHeading({ id, title, children, right }: { id: string; title: str
   return (
     <div className="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
       <div>
-        <h2 id={id} className="text-xl leading-7">
+        <h2 id={id} className="text-lg leading-7 font-semibold tracking-[-0.01em]">
           {title}
         </h2>
         {children ? <p className="mt-0.5 text-cds-text-secondary">{children}</p> : null}
@@ -60,7 +60,7 @@ function FieldTile({ label, f, value, sub }: { label: string; f: Figure; value: 
   return (
     <Tile className="flex flex-col">
       <TileLabel className="pt-1">{label}</TileLabel>
-      <p className="tnum mt-2 text-[28px] leading-9">{value}</p>
+      <p className="tnum mt-2 text-3xl font-semibold tracking-[-0.02em]">{value}</p>
       <p className="mt-1 min-h-5 text-cds-text-secondary">{sub}</p>
       <div className="mt-auto pt-4">
         <Footer f={f} name={label} />
@@ -207,7 +207,7 @@ function VoltageGrid({ d }: { d: BatteryDetail }) {
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {modules.map((mod) => (
                 <div key={mod}>
-                  <h3 className="mb-1 text-xs font-semibold leading-4 tracking-[0.32px] text-cds-text-secondary">Module {mod}</h3>
+                  <h3 className="mb-1 text-xs font-semibold leading-4 text-cds-text-secondary">Module {mod}</h3>
                   <ul className="grid grid-cols-2 gap-px bg-cds-border-subtle">
                     {v.cells
                       .filter((c) => c.module === mod)
@@ -477,7 +477,7 @@ function Coverage({ d }: { d: BatteryDetail }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <Tile>
           <h3 className="font-semibold">Data received, last {c.periodDays} days</h3>
-          <p className="tnum mt-2 text-[28px] leading-9">{never ? <NotRecorded>Never reported</NotRecorded> : c.pct === null ? <NotRecorded /> : `${num(c.pct, 1)}%`}</p>
+          <p className="tnum mt-2 text-3xl font-semibold tracking-[-0.02em]">{never ? <NotRecorded>Never reported</NotRecorded> : c.pct === null ? <NotRecorded /> : `${num(c.pct, 1)}%`}</p>
           <p className="tnum text-cds-text-secondary">
             {num(c.received)} of {num(c.expected)} expected messages · longest time with no data {never ? 'Never reported' : `${num(c.longestGapHours, 1)} h`}
           </p>
@@ -486,7 +486,7 @@ function Coverage({ d }: { d: BatteryDetail }) {
             <Updated at={cov.basis.calculatedAt} />
             <Working metricId="data_coverage_pct" basis={cov.basis} name="Data received" />
           </div>
-          <h4 className="mt-5 text-xs font-semibold leading-4 tracking-[0.32px] text-cds-text-secondary">By day</h4>
+          <h4 className="mt-5 text-xs font-semibold leading-4 text-cds-text-secondary">By day</h4>
           {c.daily.length ? (
             <Table>
               <caption className="sr-only">Messages received each day, last {c.periodDays} days</caption>
@@ -518,7 +518,7 @@ function Coverage({ d }: { d: BatteryDetail }) {
             <Working metricId="data_coverage_daily_pct" basis={daily.basis} name="Data received, daily" />
           </div>
 
-          <h4 className="mt-5 text-xs font-semibold leading-4 tracking-[0.32px] text-cds-text-secondary">
+          <h4 className="mt-5 text-xs font-semibold leading-4 text-cds-text-secondary">
             Time with no data over {c.gapLimitHours} hours
           </h4>
           {c.gaps.length ? (
@@ -584,7 +584,7 @@ function Header({ d }: { d: BatteryDetail }) {
   const b = d.battery;
   return (
     <div className="mb-6">
-      <h1 className="text-[28px] leading-9">{b.factorySerial}</h1>
+      <h1 className="text-2xl leading-8 font-semibold tracking-[-0.01em]">{b.factorySerial}</h1>
       <p className="tnum mt-1 text-cds-text-secondary">
         Battery ID {b.bmsId} · {b.model ?? 'Model not recorded'}
         {b.holder ? ` · ${b.holder}, ${b.site ?? 'site not recorded'}` : ' · Not deployed'}
@@ -644,7 +644,7 @@ export function BatteryView() {
     <div className="mx-auto max-w-[1312px] px-4 pb-16 pt-6 lg:px-8">
       <Link to="/" className="mb-4 inline-flex items-center gap-1 text-cds-interactive hover:underline">
         <ArrowLeft aria-hidden="true" className="h-4 w-4" />
-        Fleet overview
+        Battery overview
       </Link>
       {q.isPending ? (
         <LoadingView />
@@ -661,7 +661,7 @@ export function BatteryView() {
           }
         >
           {missing
-            ? 'It may have been removed, or it is not one of your manufacturer’s batteries. Go back to the fleet overview and pick one from the list.'
+            ? 'It may have been removed, or it is not one of your manufacturer’s batteries. Go back to the battery overview and pick one from the list.'
             : 'Nothing was changed. Try again; if it keeps failing, reload the page.'}
         </InlineNotification>
       ) : (

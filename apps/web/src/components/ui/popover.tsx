@@ -2,7 +2,7 @@ import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { forwardRef, useId, useRef, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 
-// shadcn/ui Popover, themed to Carbon: square corners, white layer, the only place a shadow is used.
+// shadcn/ui Popover, Linear-style: 8px radius, hairline border, soft shadow (popovers and sheets only).
 export const Popover = PopoverPrimitive.Root;
 export const PopoverTrigger = PopoverPrimitive.Trigger;
 export const PopoverAnchor = PopoverPrimitive.Anchor;
@@ -18,7 +18,7 @@ export const PopoverContent = forwardRef<
       sideOffset={sideOffset}
       collisionPadding={16}
       className={cn(
-        'bpte z-50 max-h-[var(--radix-popover-content-available-height)] w-[min(22rem,calc(100vw-32px))] overflow-y-auto border border-cds-border-subtle bg-cds-layer-2 p-4 text-left text-cds-text-primary shadow-[0_2px_6px_rgba(0,0,0,0.3)] outline-none',
+        'bpte bpte-pop-in z-50 max-h-[var(--radix-popover-content-available-height)] w-[min(22rem,calc(100vw-32px))] overflow-y-auto rounded-lg border border-cds-border-subtle bg-cds-layer-2 p-4 text-left text-cds-text-primary shadow-cds-pop outline-none',
         className,
       )}
       {...props}
@@ -67,7 +67,7 @@ export function Toggletip({
       <PopoverTrigger
         aria-label={label}
         aria-describedby={open ? id : undefined}
-        className="inline-flex h-6 w-6 shrink-0 items-center justify-center text-cds-text-secondary hover:bg-cds-layer-hover hover:text-cds-text-primary"
+        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-cds-text-secondary hover:bg-cds-layer-hover hover:text-cds-text-primary"
         onPointerEnter={(e) => {
           if (e.pointerType !== 'mouse') return;
           cancelLeave();
@@ -95,6 +95,8 @@ export function Toggletip({
       <PopoverContent
         id={id}
         role="tooltip"
+        // The panel can be taller than a phone screen and then scrolls; focusable so a keyboard can scroll it.
+        tabIndex={0}
         className={contentClassName}
         onOpenAutoFocus={(e) => e.preventDefault()}
         onCloseAutoFocus={(e) => e.preventDefault()}

@@ -18,7 +18,7 @@ export function SectionHeading({
   return (
     <div className="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
       <div>
-        <h2 id={id} className="text-xl leading-7">
+        <h2 id={id} className="text-lg leading-7 font-semibold tracking-[-0.01em]">
           {title}
         </h2>
         {children ? <p className="mt-0.5 text-cds-text-secondary">{children}</p> : null}

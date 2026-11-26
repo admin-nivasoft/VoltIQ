@@ -9,7 +9,7 @@ const STYLE: Record<Kind, { box: string; icon: typeof Info; iconClass: string; l
   warning: {
     box: 'border-l-cds-warning bg-cds-warning-bg',
     icon: AlertTriangle,
-    iconClass: 'text-[#8e6a00]',
+    iconClass: 'text-cds-warning',
     label: 'Warning',
   },
   success: {
@@ -22,7 +22,7 @@ const STYLE: Record<Kind, { box: string; icon: typeof Info; iconClass: string; l
 };
 
 /**
- * Carbon inline notification (low contrast): sits in the page next to what it is about, and stays
+ * Inline notification (low contrast): sits in the page next to what it is about, and stays
  * until the problem is gone. Used for anything the user must act on, instead of a toast. The kind is
  * always given in text and by an icon as well as by colour.
  */
@@ -45,14 +45,14 @@ export function InlineNotification({
     <div
       role={kind === 'error' ? 'alert' : 'status'}
       className={cn(
-        'flex flex-wrap items-start gap-x-3 gap-y-2 border border-l-[3px] border-cds-border-subtle px-4 py-3',
+        'flex flex-wrap items-start gap-x-3 gap-y-2 rounded-lg border border-l-[3px] border-cds-border-subtle px-4 py-3',
         s.box,
         className,
       )}
     >
-      <Icon aria-hidden="true" className={cn('mt-px h-5 w-5 shrink-0', s.iconClass)} />
+      <Icon aria-hidden="true" className={cn('mt-px h-4 w-4 shrink-0', s.iconClass)} />
       <div className="min-w-0 flex-1">
-        <p className="font-semibold">
+        <p className="font-medium">
           <span className="sr-only">{s.label}: </span>
           {title}
         </p>

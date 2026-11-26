@@ -21,7 +21,7 @@ export const WIDTHS = [390, 768, 1440] as const;
 
 export type DemoRole = 'Battery manager' | 'Admin';
 
-/** Signs in from the demo sign-in screen and waits for the fleet overview to finish loading. */
+/** Signs in from the demo sign-in screen and waits for the battery overview to finish loading. */
 export async function signIn(page: Page, role: DemoRole, visit = true) {
   if (visit) await page.goto('/');
   await expect(page.getByRole('heading', { level: 1, name: 'Choose a demo user' })).toBeVisible();
@@ -29,13 +29,13 @@ export async function signIn(page: Page, role: DemoRole, visit = true) {
     .getByRole('group', { name: 'Lumen Ridge Batteries · battery manufacturer' })
     .getByRole('button', { name: new RegExp(`^${role}`) })
     .click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Fleet overview' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'All batteries' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Battery overview' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'At a glance' })).toBeVisible();
 }
 
-export type Screen = 'Fleet overview' | 'Factory data import' | 'Data connection';
+export type Screen = 'Battery overview' | 'Factory data import' | 'Data connection';
 const LOADED: Record<Screen, string> = {
-  'Fleet overview': 'All batteries',
+  'Battery overview': 'At a glance',
   'Factory data import': 'Import history',
   'Data connection': 'Connectors',
 };
@@ -51,8 +51,9 @@ export async function goTo(page: Page, screen: Screen) {
   await expect(page.getByRole('heading', { name: LOADED[screen] })).toBeVisible();
 }
 
-/** Opens the first battery in the fleet table or card list. Returns its factory serial. */
+/** Opens the first battery in the All batteries tab or card list. Returns its factory serial. */
 export async function openFirstBattery(page: Page): Promise<string> {
+  await openTab(page, 'All batteries');
   const link = page.getByRole('link', { name: /^LRB-\d{4}-\d{5}$/ }).first();
   const serial = (await link.textContent())!.trim();
   await link.click();
@@ -84,4 +85,11 @@ export async function attentionCount(page: Page, text: RegExp): Promise<number |
   if ((await item.count()) === 0) return null;
   const first = (await item.first().innerText()).trim().match(/^[\d,]+/);
   return first ? Number(first[0].replace(/,/g, '')) : null;
+}
+
+/** Opens a tab of the battery overview by clicking it, and waits for it to be selected. */
+export async function openTab(page: Page, name: string) {
+  const tab = page.getByRole('tab', { name: new RegExp(`^${name}`) });
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-selected', 'true');
 }

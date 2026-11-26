@@ -1,8 +1,8 @@
 import type { Config } from 'tailwindcss';
 
-// The `cds` colours and `plex` font are the Carbon-themed design tokens used by the shadcn-style
-// components in src/components/ui. Values live as CSS variables in src/demo/app/theme.css (checked
-// against carbondesignsystem.com, White theme). Extending only: the existing screens are unchanged.
+// The `cds` colours and `plex` font are the Linear-style design tokens used by the shadcn-style
+// components in src/components/ui. Values live as CSS variables in src/demo/app/theme.css (light default,
+// dark via html[data-theme]). Extending only: the existing screens are unchanged.
 const v = (name: string) => `var(--cds-${name})`;
 
 export default {
@@ -40,9 +40,10 @@ export default {
         },
       },
       fontFamily: {
-        plex: ['"IBM Plex Sans"', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
+        plex: ['Inter', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
       },
-      borderRadius: { cds: '2px' },
+      borderRadius: { cds: '4px' },
+      boxShadow: { 'cds-pop': 'var(--cds-shadow-pop)' },
     },
   },
   plugins: [],

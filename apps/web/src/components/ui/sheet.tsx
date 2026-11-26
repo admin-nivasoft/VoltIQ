@@ -15,18 +15,18 @@ export const SheetContent = forwardRef<
   ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
   <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay className="bpte fixed inset-0 z-40 bg-[rgba(22,22,22,0.5)]" />
+    <DialogPrimitive.Overlay className="bpte fixed inset-0 z-40 bg-[var(--cds-overlay)]" />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'bpte fixed inset-y-0 left-0 z-50 flex w-64 max-w-[85vw] flex-col bg-cds-layer shadow-[0_2px_6px_rgba(0,0,0,0.3)] outline-none',
+        'bpte bpte-pop-in fixed inset-y-0 left-0 z-50 flex w-64 max-w-[85vw] flex-col border-r border-cds-border-subtle bg-cds-layer shadow-cds-pop outline-none',
         className,
       )}
       {...props}
     >
       {children}
       <DialogPrimitive.Close
-        className="absolute right-0 top-0 inline-flex h-12 w-12 items-center justify-center text-cds-text-primary hover:bg-cds-layer-hover"
+        className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-md text-cds-text-primary hover:bg-cds-layer-hover"
         aria-label="Close menu"
       >
         <X aria-hidden="true" className="h-5 w-5" />

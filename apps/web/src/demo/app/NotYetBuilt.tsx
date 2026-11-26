@@ -8,7 +8,7 @@ export function NotYetBuilt({ title }: { title: string }) {
   usePageTitle(title);
   return (
     <div className="mx-auto max-w-[1312px] px-4 pt-6 lg:px-8">
-      <h1 className="text-[28px] leading-9">{title}</h1>
+      <h1 className="text-2xl leading-8 font-semibold tracking-[-0.01em]">{title}</h1>
       <InlineNotification kind="info" title="Not in this preview yet" className="mt-6">
         <p className="flex items-center gap-2">
           <Construction aria-hidden="true" className="h-4 w-4" />
@@ -16,7 +16,7 @@ export function NotYetBuilt({ title }: { title: string }) {
         </p>
       </InlineNotification>
       <Link to="/" className="mt-6 inline-block text-cds-interactive hover:underline">
-        Back to the fleet overview
+        Back to the battery overview
       </Link>
     </div>
   );

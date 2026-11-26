@@ -170,7 +170,7 @@ export function ConnectionView() {
     <div className="mx-auto max-w-[1312px] px-4 pb-16 pt-6 lg:px-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
         <div>
-          <h1 className="text-[28px] leading-9">Data connection</h1>
+          <h1 className="text-2xl leading-8 font-semibold tracking-[-0.01em]">Data connection</h1>
           <p className="mt-1 text-cds-text-secondary">
             <RadioTower aria-hidden="true" className="mr-1 inline h-4 w-4 align-text-bottom" />
             {c

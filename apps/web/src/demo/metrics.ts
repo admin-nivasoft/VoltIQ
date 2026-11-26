@@ -309,11 +309,11 @@ export const METRICS: MetricDefinition[] = [
   }),
   m({
     metricId: 'fleet_data_coverage_pct',
-    label: 'Fleet data received',
+    label: 'Data received, all batteries',
     unit: '%',
     source: 'calculated',
     words:
-      'All messages received across the fleet, compared with all messages expected in the period. Repeated messages count once.',
+      'All messages received across all batteries, compared with all messages expected in the period. Repeated messages count once.',
     symbols: 'In short: messages received ÷ messages expected × 100, all batteries',
     inputs: [
       { name: 'Messages received and expected, per battery', from: 'bms' },

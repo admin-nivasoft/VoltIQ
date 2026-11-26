@@ -111,7 +111,7 @@ export function ImportsView() {
     <div className="mx-auto max-w-[1312px] px-4 pb-16 pt-6 lg:px-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
         <div>
-          <h1 className="text-[28px] leading-9">Factory data import</h1>
+          <h1 className="text-2xl leading-8 font-semibold tracking-[-0.01em]">Factory data import</h1>
           <p className="mt-1 text-cds-text-secondary">
             {session.me ? `${session.me.manufacturer.name} · ` : ''}CSV in this demo. File formats are not decided yet.
           </p>
@@ -133,7 +133,7 @@ export function ImportsView() {
         <>
           {canRun ? (
             <section aria-labelledby="choose-h" className="mb-8">
-              <h2 id="choose-h" className="mb-1 text-xl leading-7">Choose a file</h2>
+              <h2 id="choose-h" className="mb-1 text-lg leading-7 font-semibold tracking-[-0.01em]">Choose a file</h2>
               <p className="mb-3 max-w-prose text-cds-text-secondary">
                 The file is checked first and nothing changes until you select Import file. It stays in this
                 browser and is forgotten when you reset the demo.
@@ -228,7 +228,7 @@ export function ImportsView() {
 
           {canRun && shown ? (
             <section aria-labelledby="result-h" className="mb-8">
-              <h2 id="result-h" className="mb-3 text-xl leading-7">
+              <h2 id="result-h" className="mb-3 text-lg leading-7 font-semibold tracking-[-0.01em]">
                 {result ? 'Import result' : 'Check result'}
                 <span className="ml-2 break-all text-base text-cds-text-secondary">{shown.fileName}</span>
               </h2>
@@ -239,7 +239,7 @@ export function ImportsView() {
                   title="File imported"
                   action={
                     <Button asChild size="sm" variant="tertiary">
-                      <Link to="/">Fleet overview <ArrowRight aria-hidden="true" /></Link>
+                      <Link to="/">Battery overview <ArrowRight aria-hidden="true" /></Link>
                     </Button>
                   }
                 >
@@ -288,7 +288,7 @@ export function ImportsView() {
 
           <section aria-labelledby="history-h">
             <div className="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
-              <h2 id="history-h" className="text-xl leading-7">Import history</h2>
+              <h2 id="history-h" className="text-lg leading-7 font-semibold tracking-[-0.01em]">Import history</h2>
               {data.history[0] ? <Updated at={data.history[0].at} prefix="Last import" /> : null}
             </div>
             {data.history.length ? (

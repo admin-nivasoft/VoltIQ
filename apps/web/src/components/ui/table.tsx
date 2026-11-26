@@ -3,15 +3,15 @@ import type { HTMLAttributes, ReactNode, TdHTMLAttributes, ThHTMLAttributes } fr
 import { cn } from '../../lib/cn';
 
 /**
- * shadcn/ui Table, themed to Carbon's data table: compact 32px rows, row dividers, a sticky header on
- * a grey layer, clear hover. Numbers are right-aligned with tabular figures (pass `numeric`).
+ * shadcn/ui Table, in Linear style: compact 32px rows, row dividers, a sticky header on
+ * a quiet surface, clear hover. Numbers are right-aligned with tabular figures (pass `numeric`).
  */
 export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>) {
-  return <table className={cn('w-full border-collapse text-left text-sm', className)} {...props} />;
+  return <table className={cn('w-full border-collapse text-left text-[13px]', className)} {...props} />;
 }
 
 export function TableHeader({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn('sticky top-0 z-10 bg-cds-layer-selected', className)} {...props} />;
+  return <thead className={cn('sticky top-0 z-10 bg-cds-layer text-cds-text-secondary shadow-[inset_0_-1px_0_var(--cds-border-subtle)]', className)} {...props} />;
 }
 
 export function TableBody(props: HTMLAttributes<HTMLTableSectionElement>) {
@@ -21,7 +21,7 @@ export function TableBody(props: HTMLAttributes<HTMLTableSectionElement>) {
 export function TableRow({ className, ...props }: HTMLAttributes<HTMLTableRowElement>) {
   return (
     <tr
-      className={cn('border-b border-cds-border-subtle bg-cds-layer-2 hover:bg-cds-layer-hover', className)}
+      className={cn('border-b border-cds-border-subtle hover:bg-cds-layer-hover', className)}
       {...props}
     />
   );
@@ -36,7 +36,7 @@ export function TableHead({
     <th
       scope="col"
       className={cn(
-        'h-8 whitespace-nowrap px-4 font-semibold text-cds-text-primary',
+        'h-8 whitespace-nowrap px-4 text-xs font-medium',
         numeric && 'text-right',
         className,
       )}
@@ -52,7 +52,7 @@ export function TableCell({
 }: TdHTMLAttributes<HTMLTableCellElement> & { numeric?: boolean }) {
   return (
     <td
-      className={cn('h-8 px-4 py-1.5 align-middle', numeric && 'tnum text-right', className)}
+      className={cn('h-8 px-4 py-1 align-middle', numeric && 'tnum text-right', className)}
       {...props}
     />
   );
@@ -82,7 +82,7 @@ export function SortableHead({
     <th
       scope="col"
       aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
-      className={cn('h-8 p-0 font-semibold', className)}
+      className={cn('h-8 p-0 text-xs font-medium', className)}
     >
       <button
         type="button"

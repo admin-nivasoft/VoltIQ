@@ -34,7 +34,7 @@ export function SourceTag({ source, className }: { source: Source; className?: s
 /** "Updated 11 min ago", with the exact time on hover and for screen readers. */
 export function Updated({ at, prefix = 'Updated' }: { at: string; prefix?: string }) {
   return (
-    <span className="inline-flex max-w-full items-center gap-1 text-xs leading-4 tracking-[0.32px] text-cds-text-helper">
+    <span className="inline-flex max-w-full items-center gap-1 text-xs leading-4 text-cds-text-helper">
       <Clock aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
       <time dateTime={at} title={dateTime(at)}>
         {prefix} {ago(at)}
@@ -51,7 +51,7 @@ export function NotRecorded({ children = 'Not recorded' }: { children?: ReactNod
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="mt-3 first:mt-0">
-      <p className="text-xs font-semibold leading-4 tracking-[0.32px] text-cds-text-secondary">{title}</p>
+      <p className="text-xs font-semibold leading-4 text-cds-text-secondary">{title}</p>
       <div className="mt-1">{children}</div>
     </div>
   );
@@ -67,7 +67,7 @@ function WorkingBody({ def, basis }: { def: MetricDefinition; basis?: Basis }) {
       </p>
       <Section title={calculated ? 'How this is worked out' : 'Where this comes from'}>
         <p>{def.words}</p>
-        <p className="tnum mt-2 bg-cds-layer px-2 py-1.5 text-[13px]">{def.symbols}</p>
+        <p className="tnum mt-2 rounded-md bg-cds-layer px-2 py-1.5 text-[13px]">{def.symbols}</p>
       </Section>
       <Section title="What it uses">
         <ul className="space-y-1">

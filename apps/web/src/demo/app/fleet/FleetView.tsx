@@ -1,6 +1,7 @@
 import { ArrowRight, FileWarning, RadioTower, SlidersHorizontal, Unlink, WifiOff } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { m } from 'motion/react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '../../../components/ui/button';
 import { InlineNotification } from '../../../components/ui/inline-notification';
 import { Skeleton } from '../../../components/ui/skeleton';
@@ -10,10 +11,12 @@ import { usePageTitle } from '../../../lib/usePageTitle';
 import type { BatteryRef, Distribution, FleetOverview, Severity } from '../../types';
 import { NotRecorded, SourceTag, Updated, Working } from '../figure';
 import { ago, dateTime, num, plural } from '../format';
+import { fadeUp, lift, staggerParent } from '../motion';
 import { SEVERITY, SeverityTag } from '../severity';
 import { useOverview } from '../Shell';
 import { BatteryTable } from './BatteryTable';
 import { Histogram } from './Histogram';
+import { Tabs } from './Tabs';
 
 const batteryName = (b: BatteryRef) => b.factorySerial ?? b.bmsId ?? 'Unnamed battery';
 
@@ -39,7 +42,7 @@ function SectionHeading({
   return (
     <div className="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
       <div>
-        <h2 id={id} className="text-xl leading-7">
+        <h2 id={id} className="text-lg leading-7 font-semibold tracking-[-0.01em]">
           {title}
         </h2>
         {children ? <p className="mt-0.5 text-cds-text-secondary">{children}</p> : null}
@@ -65,7 +68,7 @@ function Attention({ o }: { o: FleetOverview }) {
       count: openTotal,
       text: openTotal === 1 ? 'open warning' : 'open warnings',
       detail: (['high', 'medium', 'low'] as const).filter((s) => w[s]).map((s) => `${w[s]} ${SEVERITY[s].label}`).join(' · '),
-      href: '#warnings',
+      href: '?tab=warnings#warnings',
     });
   }
   if (notReporting)
@@ -75,7 +78,7 @@ function Attention({ o }: { o: FleetOverview }) {
       count: notReporting,
       text: notReporting === 1 ? 'battery not reporting' : 'batteries not reporting',
       detail: `No data in the last ${o.settings.reportingWindowHours} hours`,
-      href: '#coverage',
+      href: '?tab=data#coverage',
     });
   if (o.gaps.value)
     items.push({
@@ -84,7 +87,7 @@ function Attention({ o }: { o: FleetOverview }) {
       count: o.gaps.value,
       text: o.gaps.value === 1 ? 'battery missing data' : 'batteries missing data',
       detail: `Last ${o.settings.coveragePeriodDays} days`,
-      href: '#coverage',
+      href: '?tab=data#coverage',
     });
   if (o.unmatched.value)
     items.push({
@@ -93,7 +96,7 @@ function Attention({ o }: { o: FleetOverview }) {
       count: o.unmatched.value,
       text: o.unmatched.value === 1 ? 'battery ID is not recognised' : 'battery IDs are not recognised',
       detail: 'Data kept until linked',
-      href: '#data-quality',
+      href: '?tab=data#data-quality',
     });
   if (o.noBirthRecord.value)
     items.push({
@@ -102,12 +105,12 @@ function Attention({ o }: { o: FleetOverview }) {
       count: o.noBirthRecord.value,
       text: o.noBirthRecord.value === 1 ? 'battery without factory record' : 'batteries without factory record',
       detail: 'Entered by an Admin',
-      href: '#data-quality',
+      href: '?tab=data#data-quality',
     });
 
   return (
     <section aria-labelledby="attention-h" className="mb-8">
-      <h2 id="attention-h" className="mb-3 text-xl leading-7">
+      <h2 id="attention-h" className="mb-3 text-lg leading-7 font-semibold tracking-[-0.01em]">
         Needs attention
       </h2>
       {items.length === 0 ? (
@@ -116,32 +119,39 @@ function Attention({ o }: { o: FleetOverview }) {
           every ID is matched.
         </InlineNotification>
       ) : (
-        <ul className="flex flex-wrap gap-px border border-cds-border-subtle bg-cds-border-subtle">
+        <m.ul className="flex flex-wrap gap-3" variants={staggerParent} initial="hidden" animate="show">
           {items.map((i) => (
-            <li key={i.key} className="min-w-0 flex-1 basis-full bg-cds-layer-2 sm:basis-[260px] xl:basis-[200px]">
+            <m.li
+              key={i.key}
+              variants={fadeUp}
+              whileHover={lift}
+              className="grad-tile min-w-0 flex-1 basis-full rounded-lg sm:basis-[260px] xl:basis-[200px]"
+            >
               <a
                 href={i.href}
-                className="group flex h-full items-start gap-3 p-4 hover:bg-cds-layer-hover [&_svg]:h-5 [&_svg]:w-5 [&_svg]:shrink-0"
+                className="group flex h-full items-start gap-3 rounded-lg p-4 [&_svg]:h-5 [&_svg]:w-5 [&_svg]:shrink-0"
               >
                 <span className="mt-1">{i.icon}</span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline gap-2 xl:block">
-                    <span className="tnum text-[28px] leading-9 xl:block">{num(i.count)}</span>
+                    <span className="tnum text-3xl font-semibold tracking-[-0.02em] xl:block">{num(i.count)}</span>
                     <span className="font-semibold xl:block">{i.text}</span>
                   </span>
                   <span className="block text-xs leading-4 text-cds-text-secondary">{i.detail}</span>
                 </span>
                 <ArrowRight aria-hidden="true" className="mt-2 !h-4 !w-4 text-cds-interactive opacity-0 group-hover:opacity-100" />
               </a>
-            </li>
+            </m.li>
           ))}
-        </ul>
+        </m.ul>
       )}
     </section>
   );
 }
 
 // ---------------------------------------------------------------- key figures
+
+const MTile = m.create(Tile);
 
 function KeyFigure({
   label,
@@ -157,18 +167,18 @@ function KeyFigure({
   sub: ReactNode;
 }) {
   return (
-    <Tile className="flex flex-col">
+    <MTile variants={fadeUp} className="grad-tile flex flex-col">
       <div className="flex items-start justify-between gap-2">
         <TileLabel className="pt-1">{label}</TileLabel>
         <Working metricId={metricId} basis={basis} name={label} className="-mr-1 -mt-0.5" />
       </div>
-      <p className="tnum mt-2 text-[32px] leading-10">{value}</p>
+      <p className="tnum mt-2 text-3xl font-semibold tracking-[-0.02em]">{value}</p>
       <p className="mt-1 text-cds-text-secondary">{sub}</p>
       <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-4">
         <SourceTag source="calculated" />
         <Updated at={basis.calculatedAt} prefix="Updated" />
       </div>
-    </Tile>
+    </MTile>
   );
 }
 
@@ -176,10 +186,10 @@ function KeyFigures({ o }: { o: FleetOverview }) {
   const h = o.health;
   return (
     <section aria-labelledby="glance-h" className="mb-8">
-      <h2 id="glance-h" className="mb-3 text-xl leading-7">
-        Fleet at a glance
+      <h2 id="glance-h" className="mb-3 text-lg leading-7 font-semibold tracking-[-0.01em]">
+        At a glance
       </h2>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <m.div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" variants={staggerParent} initial="hidden" animate="show">
         <KeyFigure
           label="Batteries on record"
           metricId="batteries_registered"
@@ -200,7 +210,7 @@ function KeyFigures({ o }: { o: FleetOverview }) {
           sub={`Sent data in the last ${o.settings.reportingWindowHours} hours (example setting)`}
         />
         <KeyFigure
-          label="Fleet health, mean (reported by BMS)"
+          label="Battery health, mean (reported by BMS)"
           metricId="fleet_soh_reported_mean"
           basis={{ ...h.basis, metricId: 'fleet_soh_reported_mean' }}
           value={h.mean === null ? <NotRecorded /> : `${num(h.mean, 1)}%`}
@@ -215,13 +225,13 @@ function KeyFigures({ o }: { o: FleetOverview }) {
           }
         />
         <KeyFigure
-          label="Fleet data received"
+          label="Data received, all batteries"
           metricId="fleet_data_coverage_pct"
           basis={o.coverage.basis}
           value={o.coverage.pct === null ? <NotRecorded /> : `${num(o.coverage.pct, 1)}%`}
           sub={`Of expected messages, last ${o.settings.coveragePeriodDays} days`}
         />
-      </div>
+      </m.div>
     </section>
   );
 }
@@ -242,7 +252,7 @@ function Warnings({ o }: { o: FleetOverview }) {
               <SeverityTag severity={s} />
               {s === 'high' ? <Working metricId="open_warnings_by_severity" basis={o.warnings.basis} name="Open warnings by severity" /> : null}
             </div>
-            <p className="tnum mt-2 text-[28px] leading-9">
+            <p className="tnum mt-2 text-3xl font-semibold tracking-[-0.02em]">
               {num(o.warnings.bySeverity[s])}{' '}
               <span className="text-sm text-cds-text-secondary">open</span>
             </p>
@@ -378,7 +388,7 @@ function HealthAndCycles({ o }: { o: FleetOverview }) {
   const soh = o.settings.rules.find((r) => r.ruleId === 'soh_low');
   return (
     <section aria-labelledby="health" className="mb-8 scroll-mt-16">
-      <SectionHeading id="health" title="Health and cycles across the fleet">
+      <SectionHeading id="health" title="Health and cycles across all batteries">
         What each battery’s own system (BMS) reports. We do not work out health or cycles ourselves.
       </SectionHeading>
       <div className="grid gap-4 lg:grid-cols-2">
@@ -566,8 +576,8 @@ function ExampleSettings({ o }: { o: FleetOverview }) {
 
 function LoadingView() {
   return (
-    <div aria-busy="true" aria-label="Loading the fleet overview">
-      <span className="sr-only" role="status">Loading the fleet overview</span>
+    <div aria-busy="true" aria-label="Loading the battery overview">
+      <span className="sr-only" role="status">Loading the battery overview</span>
       <Skeleton className="mb-3 h-6 w-48" />
       <Skeleton className="mb-8 h-24 w-full" />
       <Skeleton className="mb-3 h-6 w-40" />
@@ -581,16 +591,21 @@ function LoadingView() {
   );
 }
 
+const TAB_IDS = ['summary', 'warnings', 'health', 'data', 'batteries'];
+
 export function FleetView() {
-  usePageTitle('Fleet overview');
+  usePageTitle('Battery overview');
   const q = useOverview();
   const o = q.data;
+  const [params, setParams] = useSearchParams();
+  const raw = params.get('tab') ?? '';
+  const tab = TAB_IDS.includes(raw) ? raw : 'summary';
 
   return (
     <div className="mx-auto max-w-[1312px] px-4 pb-16 pt-6 lg:px-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
         <div>
-          <h1 className="text-[28px] leading-9">Fleet overview</h1>
+          <h1 className="text-2xl leading-8 font-semibold tracking-[-0.01em]">Battery overview</h1>
           <p className="mt-1 text-cds-text-secondary">
             {o ? `${o.manufacturer.name} · ${plural(o.registered.value, 'battery', 'batteries')} registered` : ' '}
           </p>
@@ -609,27 +624,46 @@ export function FleetView() {
       ) : q.isError || !o ? (
         <InlineNotification
           kind="error"
-          title="The fleet overview could not be loaded"
+          title="The battery overview could not be loaded"
           action={<Button size="sm" variant="tertiary" onClick={() => void q.refetch()}>Try again</Button>}
         >
           Nothing was changed. Try again; if it keeps failing, reload the page.
         </InlineNotification>
       ) : (
         <>
-          <Attention o={o} />
-          <KeyFigures o={o} />
-          <Warnings o={o} />
-          <HealthAndCycles o={o} />
-          <div className="mb-8 grid gap-8 xl:grid-cols-2">
-            <Coverage o={o} />
-            <DataQuality o={o} />
-          </div>
-          <section aria-labelledby="batteries" className="scroll-mt-16">
-            <SectionHeading id="batteries" title="All batteries" updated={{ at: o.updated.calculations, prefix: 'Updated' }}>
-              Sorted by open warnings. Select a battery to see its details and live data.
-            </SectionHeading>
-            <BatteryTable settings={o.settings} />
-          </section>
+          <Tabs
+            label="Battery overview sections"
+            selected={tab}
+            onSelect={(id) => setParams({ tab: id })}
+            tabs={[
+              { id: 'summary', label: 'Summary', panel: (<><Attention o={o} /><KeyFigures o={o} /></>) },
+              { id: 'warnings', label: 'Warnings', count: o.warnings.bySeverity.high + o.warnings.bySeverity.medium + o.warnings.bySeverity.low, panel: <Warnings o={o} /> },
+              { id: 'health', label: 'Health', panel: <HealthAndCycles o={o} /> },
+              {
+                id: 'data',
+                label: 'Data',
+                count: o.gaps.value,
+                panel: (
+                  <div className="mb-8 grid gap-8 xl:grid-cols-2">
+                    <Coverage o={o} />
+                    <DataQuality o={o} />
+                  </div>
+                ),
+              },
+              {
+                id: 'batteries',
+                label: 'All batteries',
+                panel: (
+                  <section aria-labelledby="batteries" className="scroll-mt-16">
+                    <SectionHeading id="batteries" title="All batteries" updated={{ at: o.updated.calculations, prefix: 'Updated' }}>
+                      Sorted by open warnings. Select a battery to see its details and live data.
+                    </SectionHeading>
+                    <BatteryTable settings={o.settings} />
+                  </section>
+                ),
+              },
+            ]}
+          />
           <ExampleSettings o={o} />
           <p className="mt-4 text-xs leading-4 text-cds-text-helper">Page data as of {dateTime(o.asOf)}</p>
         </>

@@ -1,65 +1,147 @@
 /*
- * Carbon-themed tokens for the BPTE screens (White theme).
- * Checked against carbondesignsystem.com (Nov 2026): background, layers, borders, text, interactive,
- * focus and support colours, the 8px-based spacing scale and the 48px shell header.
- * Hover, selected and notification-background steps are Carbon's published values but were not part
- * of that check.
+ * Blue to sky tokens for the BPTE screens. Token names keep the --cds-* prefix so the screens'
+ * classes (bg-cds-layer, text-cds-text-secondary ...) are unchanged; only the values differ.
+ * Light is the default; html[data-theme="dark"] switches to the dark set.
+ * Text pairs were checked for WCAG AA (4.5:1); border-strong for 3:1.
  */
-@import '@fontsource/ibm-plex-sans/latin-400.css';
-@import '@fontsource/ibm-plex-sans/latin-600.css';
+@import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/latin-500.css';
+@import '@fontsource/inter/latin-600.css';
 
 :root {
-  --cds-background: #ffffff;
-  --cds-layer-01: #f4f4f4; /* Gray 10 */
+  color-scheme: light;
+  --cds-background: #f8fafc;
+  --cds-layer-01: #f8fafc; /* sidebar, surfaces */
   --cds-layer-02: #ffffff;
-  --cds-layer-hover: #e8e8e8;
-  --cds-layer-selected: #e0e0e0;
-  --cds-border-subtle: #e0e0e0; /* Gray 20 */
-  --cds-border-strong: #8d8d8d; /* Gray 50 */
-  --cds-text-primary: #161616; /* Gray 100 */
-  --cds-text-secondary: #525252; /* Gray 70 */
-  --cds-text-helper: #6f6f6f; /* Gray 60 */
+  --cds-layer-hover: #f1f5f9;
+  --cds-layer-selected: #e8f0fc;
+  --cds-border-subtle: #e2e8f0;
+  --cds-border-strong: #7a8ba3; /* 3.3:1 on white and slate-50 (UI boundary) */
+  --cds-text-primary: #0f172a;
+  --cds-text-secondary: #475569;
+  --cds-text-helper: #5b6b82; /* 4.95:1 on #f1f5f9; #64748b gave 4.34 */
   --cds-text-on-color: #ffffff;
-  --cds-interactive: #0f62fe; /* Blue 60 */
-  --cds-interactive-hover: #0050e6;
-  --cds-focus: #0f62fe;
-  --cds-shell-bg: #161616;
-  --cds-shell-text: #f4f4f4;
-  --cds-shell-hover: #2c2c2c;
-  --cds-support-error: #da1e28; /* Red 60 */
-  --cds-support-warning: #f1c21b; /* Yellow 30 */
-  --cds-support-success: #24a148; /* Green 50 */
-  --cds-support-info: #0043ce; /* Blue 70 */
-  --cds-notification-error-bg: #fff1f1;
-  --cds-notification-warning-bg: #fcf4d6;
-  --cds-notification-success-bg: #defbe6;
-  --cds-notification-info-bg: #edf5ff;
-  /* Single-series chart fill: the one blue accent. */
-  --cds-data-1: #0f62fe;
+  --cds-interactive: #2563eb;
+  --cds-interactive-hover: #1d4ed8;
+  --cds-focus: #2563eb;
+  --cds-shell-bg: #ffffff;
+  --cds-shell-text: #0f172a;
+  --cds-shell-hover: #f1f5f9;
+  --cds-support-error: #b91c1c;
+  --cds-support-warning: #b45309;
+  --cds-support-success: #15803d;
+  --cds-support-info: #0369a1;
+  --cds-notification-error-bg: #fef2f2;
+  --cds-notification-warning-bg: #fffbeb;
+  --cds-notification-success-bg: #f0fdf4;
+  --cds-notification-info-bg: #f0f9ff;
+  --cds-data-1: #2563eb;
+  --cds-tag-high-bg: #fee2e2;
+  --cds-tag-high-fg: #991b1b;
+  --cds-tag-medium-bg: #fef3c7;
+  --cds-tag-medium-fg: #92400e;
+  --cds-tag-low-bg: #dbeafe;
+  --cds-tag-low-fg: #1e40af;
+  --cds-tag-success-bg: #dcfce7;
+  --cds-tag-success-fg: #166534;
+  --cds-banner-bg: #fffbeb;
+  --cds-banner-border: #fde68a;
+  --cds-banner-text: #78350f;
+  --cds-overlay: rgba(15, 23, 42, 0.35);
+  --cds-shadow-pop: 0 4px 16px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.06);
+  /* Decoration only: text never sits on a strong gradient. White on the button stops is >= 4.6:1. */
+  --cds-page-bg: radial-gradient(1200px 400px at 20% -10%, rgba(14, 165, 233, 0.08), transparent), #f8fafc;
+  --cds-bar-bg: linear-gradient(180deg, #ffffff, #f8fafc);
+  --cds-tile-bg: linear-gradient(135deg, #ffffff 40%, #f0f9ff);
+  --cds-tile-border: linear-gradient(135deg, rgba(14, 165, 233, 0.45), rgba(37, 99, 235, 0.2) 55%, #e2e8f0);
+  --cds-btn-bg: linear-gradient(180deg, #2f6df0, #2563eb);
+  --cds-btn-bg-hover: linear-gradient(180deg, #2563eb, #1d4ed8);
+  --cds-tile-shadow-hover: 0 6px 16px rgba(37, 99, 235, 0.14);
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --cds-background: #0b1020;
+  --cds-layer-01: #111831;
+  --cds-layer-02: #16203d;
+  --cds-layer-hover: #1b2748;
+  --cds-layer-selected: #1e2a4a;
+  --cds-border-subtle: #1e2a4a;
+  --cds-border-strong: #6479ad; /* 4.1:1 on #111831 */
+  --cds-text-primary: #e2e8f0;
+  --cds-text-secondary: #94a3b8;
+  --cds-text-helper: #8b9bb4;
+  --cds-text-on-color: #0b1020;
+  --cds-interactive: #60a5fa;
+  --cds-interactive-hover: #93c5fd;
+  --cds-focus: #60a5fa;
+  --cds-shell-bg: #111831;
+  --cds-shell-text: #e2e8f0;
+  --cds-shell-hover: #1b2748;
+  --cds-support-error: #f87171;
+  --cds-support-warning: #fbbf24;
+  --cds-support-success: #4ade80;
+  --cds-support-info: #38bdf8;
+  --cds-notification-error-bg: #2a1224;
+  --cds-notification-warning-bg: #2a2014;
+  --cds-notification-success-bg: #0f2a1f;
+  --cds-notification-info-bg: #0f2438;
+  --cds-data-1: #60a5fa;
+  --cds-tag-high-bg: #4a1d24;
+  --cds-tag-high-fg: #fecaca;
+  --cds-tag-medium-bg: #43300f;
+  --cds-tag-medium-fg: #fde68a;
+  --cds-tag-low-bg: #1e3a8a;
+  --cds-tag-low-fg: #bfdbfe;
+  --cds-tag-success-bg: #14452b;
+  --cds-tag-success-fg: #bbf7d0;
+  --cds-banner-bg: #2a2014;
+  --cds-banner-border: #4a3c1a;
+  --cds-banner-text: #fde68a;
+  --cds-overlay: rgba(0, 0, 0, 0.6);
+  --cds-shadow-pop: 0 4px 16px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --cds-page-bg: radial-gradient(1200px 420px at 20% -10%, rgba(30, 58, 138, 0.3), transparent), #0b1020;
+  --cds-bar-bg: linear-gradient(180deg, #131b38, #111831);
+  --cds-tile-bg: linear-gradient(135deg, rgba(30, 58, 138, 0.22), #16203d 55%);
+  --cds-tile-border: linear-gradient(135deg, rgba(96, 165, 250, 0.45), rgba(30, 58, 138, 0.4) 55%, #1e2a4a);
+  --cds-btn-bg: linear-gradient(180deg, #2f6df0, #2563eb);
+  --cds-btn-bg-hover: linear-gradient(180deg, #2563eb, #1d4ed8);
+  --cds-tile-shadow-hover: 0 6px 18px rgba(30, 58, 138, 0.45);
+}
+
+html[data-theme='dark'] body {
+  background: var(--cds-page-bg);
 }
 
 .bpte {
-  font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  font-size: 14px; /* body-compact-01 */
-  line-height: 18px;
-  letter-spacing: 0.16px;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+  font-size: 13px;
+  line-height: 20px;
+  letter-spacing: 0;
   color: var(--cds-text-primary);
-  background: var(--cds-background);
+  background-color: var(--cds-background);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Tabular figures for every number column and figure, without adding Plex Mono. */
+.bpte h1,
+.bpte h2,
+.bpte h3,
+.bpte h4 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
 .bpte .tnum {
-  font-feature-settings: 'tnum' 1;
+  font-feature-settings: 'cv11', 'ss01', 'tnum' 1;
   font-variant-numeric: tabular-nums;
 }
 
-/* Carbon focus: a visible 2px ring, inset so it is never clipped by an overflow container. */
+/* Focus: accent ring, 2px with a 2px offset. */
 .bpte :focus-visible {
   outline: 2px solid var(--cds-focus);
-  outline-offset: -2px;
-}
-.bpte [data-shell] :focus-visible {
-  outline-color: #ffffff;
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -69,4 +151,22 @@
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* Gradient 1px border: padding-box fill over a border-box gradient. Decoration only. */
+.bpte .grad-tile {
+  border: 1px solid transparent;
+  background: var(--cds-tile-bg) padding-box, var(--cds-tile-border) border-box;
+}
+
+/* CSS entry animation for Radix popover and sheet content (150ms, on mount only). */
+@keyframes bpte-pop-in {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+.bpte-pop-in { animation: bpte-pop-in 150ms ease-out; }
+
+body.bpte {
+  background: var(--cds-page-bg);
+  background-attachment: fixed;
 }

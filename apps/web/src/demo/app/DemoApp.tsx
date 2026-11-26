@@ -13,6 +13,7 @@ import { FleetView } from './fleet/FleetView';
 import { useDemoSession } from './session';
 import { Shell } from './Shell';
 import { SignIn } from './SignIn';
+import { MotionProvider } from './motion';
 import './theme.css';
 
 function Centered({ children }: { children: ReactNode }) {
@@ -54,10 +55,10 @@ function NotFound() {
   usePageTitle('Page not found');
   return (
     <div className="mx-auto max-w-[1312px] px-4 pt-6 lg:px-8">
-      <h1 className="text-[28px] leading-9">Page not found</h1>
+      <h1 className="text-2xl font-semibold leading-8 tracking-[-0.01em]">Page not found</h1>
       <p className="mt-3">That address does not exist in this demo.</p>
       <Link to="/" className="mt-4 inline-block text-cds-interactive hover:underline">
-        Back to the fleet overview
+        Back to the battery overview
       </Link>
     </div>
   );
@@ -70,6 +71,7 @@ export default function DemoApp() {
     return () => document.body.classList.remove('bpte');
   }, []);
   return (
+    <MotionProvider>
     <Routes>
       <Route path="/login" element={<SessionGate signedOut="render" />} />
       <Route element={<SessionGate signedOut="redirect" />}>
@@ -80,5 +82,6 @@ export default function DemoApp() {
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
+    </MotionProvider>
   );
 }

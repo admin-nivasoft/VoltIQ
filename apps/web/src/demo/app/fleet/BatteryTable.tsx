@@ -249,7 +249,7 @@ export function BatteryTable({ settings }: { settings: Settings }) {
 
       {list.data && list.data.items.length === 0 ? (
         <p className="border border-cds-border-subtle bg-cds-layer-2 px-4 py-6 text-center">
-          No battery matches “{q}”. Check the ID, or clear the search to see the whole fleet.
+          No battery matches “{q}”. Check the ID, or clear the search to see all batteries.
         </p>
       ) : null}
 

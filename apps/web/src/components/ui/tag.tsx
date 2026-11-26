@@ -2,19 +2,19 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import type { HTMLAttributes } from 'react';
 import { cn } from '../../lib/cn';
 
-// Carbon tag: a small, flat label. Never the only carrier of meaning: callers pass text (and an icon
+// Tag: a small label. Never the only carrier of meaning: callers pass text (and an icon
 // for status), the colour only reinforces it.
 const tagVariants = cva(
-  'inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-cds px-2 text-xs leading-4 tracking-[0.32px] [&_svg]:size-3.5 [&_svg]:shrink-0',
+  'inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-md px-2 text-xs font-medium leading-4 [&_svg]:size-3.5 [&_svg]:shrink-0',
   {
     variants: {
       tone: {
         neutral: 'bg-cds-layer-selected text-cds-text-primary',
         outline: 'border border-cds-border-strong bg-transparent text-cds-text-secondary',
-        high: 'bg-[#ffd7d9] text-[#750e13]',
-        medium: 'bg-[#fcf4d6] text-[#483700]',
-        low: 'bg-[#d0e2ff] text-[#002d9c]',
-        success: 'bg-[#defbe6] text-[#044317]',
+        high: 'bg-[var(--cds-tag-high-bg)] text-[var(--cds-tag-high-fg)]',
+        medium: 'bg-[var(--cds-tag-medium-bg)] text-[var(--cds-tag-medium-fg)]',
+        low: 'bg-[var(--cds-tag-low-bg)] text-[var(--cds-tag-low-fg)]',
+        success: 'bg-[var(--cds-tag-success-bg)] text-[var(--cds-tag-success-fg)]',
       },
     },
     defaultVariants: { tone: 'neutral' },
